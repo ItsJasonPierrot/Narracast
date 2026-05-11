@@ -1,0 +1,7 @@
+f5-tts
+torch
+pydub
+soundfile
+pdfminer.six
+mutagen
+PySide6

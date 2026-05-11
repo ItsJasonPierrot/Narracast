@@ -1,0 +1,57 @@
+# Internal project docs
+NARRACAST_ROADMAP.md
+
+# Python
+venv/
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+dist/
+build/
+.eggs/
+
+# Virtual environments
+.venv/
+env/
+ENV/
+
+# User data & generated output
+output/
+settings.json
+
+# Voice & audio assets (user-specific, too large for git)
+reference.wav
+reference.txt
+raw_audio/
+clean_voice/
+voices/*
+!voices/.gitkeep
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+*.icns
+**/*.DS_Store
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Logs
+*.log
+Narracast.log
+
+# Pytest / coverage
+.pytest_cache/
+.coverage
+htmlcov/
+
+# PyInstaller / app bundles
+*.spec
+*.app

@@ -352,6 +352,16 @@ def save_reference_text(text):
     clear_reference_cache()
 
 
+def set_profile_as_reference(profile_id: str) -> VoiceProfile:
+    """Copy a saved voice profile to the active reference.wav and reference.txt."""
+    profile = get_voice_profile(profile_id)
+    if not profile:
+        raise FileNotFoundError("Voice profile not found.")
+    shutil.copy2(profile.ref_audio, str(REFERENCE))
+    save_reference_text(profile.ref_text)
+    return profile
+
+
 def save_clip(preview_path, ref_text=""):
     if not preview_path:
         return "⚠️  Extract a clip first, then save."

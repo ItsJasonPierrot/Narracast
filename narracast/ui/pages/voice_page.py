@@ -34,6 +34,7 @@ from narracast.voices import (
     rename_voice_profile,
     save_clip,
     save_voice_profile,
+    set_profile_as_reference,
 )
 from narracast.ui.signals import get_signals
 from narracast.ui.widgets import Card, Divider, MutedLabel, SectionLabel
@@ -97,6 +98,12 @@ class VoicePage(QWidget):
         self.delete_profile_btn.setEnabled(False)
         self.delete_profile_btn.clicked.connect(self._delete_profile)
         edit_row.addWidget(self.delete_profile_btn)
+
+        self.set_reference_btn = QPushButton("Set as active reference")
+        self.set_reference_btn.setFixedHeight(30)
+        self.set_reference_btn.setEnabled(False)
+        self.set_reference_btn.clicked.connect(self._set_as_reference)
+        edit_row.addWidget(self.set_reference_btn)
         library_layout.addLayout(edit_row)
 
         sample_row = QHBoxLayout()
@@ -294,6 +301,7 @@ class VoicePage(QWidget):
             self.library_detail_label.setText("No saved voices yet.")
             self.rename_profile_btn.setEnabled(False)
             self.delete_profile_btn.setEnabled(False)
+            self.set_reference_btn.setEnabled(False)
             self.preview_profile_btn.setEnabled(False)
             return
 
@@ -301,6 +309,7 @@ class VoicePage(QWidget):
         self.profile_notes_edit.setText(profile.notes)
         self.rename_profile_btn.setEnabled(True)
         self.delete_profile_btn.setEnabled(True)
+        self.set_reference_btn.setEnabled(True)
         self.preview_profile_btn.setEnabled(True)
 
         transcript = "transcript saved" if profile.ref_text else "no transcript"
@@ -415,6 +424,20 @@ class VoicePage(QWidget):
         else:
             self._status_label.setText("⚠️  Voice profile was already missing.")
         self._refresh_library()
+        get_signals().voice_library_changed.emit()
+
+    def _set_as_reference(self) -> None:
+        profile = self._selected_profile()
+        if not profile:
+            return
+        try:
+            set_profile_as_reference(profile.id)
+        except Exception as exc:
+            self._status_label.setText(f"⚠️  {exc}")
+            return
+        self._status_label.setText(
+            f"✅  “{profile.display_name}” is now the active reference. New generations will use this voice."
+        )
         get_signals().voice_library_changed.emit()
 
     def _preview_profile(self) -> None:

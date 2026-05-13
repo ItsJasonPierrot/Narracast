@@ -58,7 +58,9 @@ Infrastructure.
 - Platform shell helper for play audio, reveal file, open folder, and log directory behavior across macOS / Windows / Linux
 - macOS app bundle with branded `.icns`, splash screen, background model loader, `~/Library/Logs/Narracast.log` for launch errors
 - Cross-platform release packaging helper, release build notes for macOS / Windows / Linux, generated SHA-256 archive checksums, and `requirements.lock`
-- 193 backend tests
+- 252 backend tests
+- Cross-platform shell helpers (`platform.py`): play audio, reveal file, open folder, OS-aware button labels, unified log directory
+- Import existing MP3 folder into project: sidecar-aware chapter creation, natural-sort order, draft stubs for sidecar-less files, session rebuild
 
 ---
 
@@ -66,7 +68,7 @@ Infrastructure.
 
 All v1 features are working. The next developer can start from `app.py`, `narracast/ui/main_window.py`, and `narracast/ui/pages/`. The backend is split cleanly under `narracast/`. All icons come from `narracast/ui/icons.py` — never hardcode mdi6 strings in pages. Tests run with `venv/bin/python -m unittest discover -s tests`; `pytest` is optional if installed.
 
-Platform note: release packaging docs exist for all three desktop OSes, and play/reveal/open-folder calls are centralized in `narracast/platform.py`. Windows/Linux still need real-machine smoke tests before calling cross-platform runtime support complete.
+Platform note: play/reveal/open-folder calls are centralized in `narracast/platform.py` with OS-aware error handling and button labels. Windows/Linux still need real-machine smoke tests before calling cross-platform runtime support complete.
 
 ---
 
@@ -76,38 +78,28 @@ Items are ordered by suggested build sequence. Difficulty and risk use the 1–5
 
 ---
 
-### 1 · Async MP3 Finalization
+### ~~1 · Async MP3 Finalization~~ — Investigated and Closed
 
-**Status:** Data-gated. Do not start until timing data exists.
+**Decision (2026-05-14): Do not build.**
 
-**Why:** If MP3 export + ID3 + metadata write is a meaningful share of total generation time, moving it off the critical path lets the next queued job start sooner.
+**Benchmark on Apple Silicon macOS:**
 
-**How to decide:** Generate 3–5 real chapters of 2 000+ words. Open Generate → Analyze timings. If the dialog recommends async, proceed. If `finalization_s / total_s` is under ~10–15%, leave it.
+| Step | Time for 30-min chapter |
+|---|---|
+| MP3 export (pydub) | 0.76 s |
+| ID3 tags (mutagen) | 8.5 ms |
+| Metadata write (JSON) | 0.5 ms |
+| **Total finalization** | **~0.77 s** |
 
-**When you do build it:**
-- Group final MP3 / ID3 / metadata write behind a `ThreadPoolExecutor` step that runs after the last chunk but before `generate_core()` returns.
-- The queue worker must wait for the future before marking the job done.
-- Do not start the next job until the previous finalization future completes, to avoid concurrent disk writes on the same output directory.
+At realistic MPS inference speeds (5–15 min per chapter), finalization represents 0.09–0.26% of total time — two orders of magnitude below the 20% threshold that would make async worthwhile. The `finalize_time_s >= 10` guard in `timing_analysis.py` is physically unreachable with pydub + mutagen on any current hardware.
 
-| User Value | Difficulty | Risk |
-|---:|---:|---:|
-| 3 | 3 | 3 |
+Adding thread pools, future tracking, error propagation across job boundaries, and cancellation race conditions for sub-1-second savings would be net negative. **Closed.**
 
 ---
 
-### 2 · Project Import from Existing MP3 Folder
+### 2 · Project Import from Existing MP3 Folder — **Shipped**
 
-**Why:** Users who already have generated MP3s outside Narracast can't bring them into a project without re-generating.
-
-**Scope:**
-- "Import folder" action on Projects page.
-- Scan for `.mp3` + sibling `.json` pairs; create chapters marked `generated` with correct `output_path`.
-- Chapters without a sidecar are created as `draft` stubs with empty text.
-- Rebuild sessions after import.
-
-| User Value | Difficulty | Risk |
-|---:|---:|---:|
-| 4 | 3 | 2 |
+Implemented in `narracast/mp3_folder_import.py`. See v1 shipped section.
 
 ---
 
@@ -146,7 +138,7 @@ Items are ordered by suggested build sequence. Difficulty and risk use the 1–5
 - Final full MP3 and sidecar are still written when all chunks complete.
 - Cancellation must clean up partial chunk files.
 
-**Caution:** This touches the generation pipeline and the reader simultaneously. Build after async finalization (item 1) so the stage boundaries are clear.
+**Caution:** This touches the generation pipeline and the reader simultaneously. The previous dependency on async finalization (item 1) is removed — that item was investigated and closed.
 
 | User Value | Difficulty | Risk |
 |---:|---:|---:|

@@ -133,10 +133,10 @@ class ProjectStorageTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             project = projects.create_project("Book", root=root)
-            first = projects.add_chapter(project["id"], "One", "word " * 100, root=root)
-            second = projects.add_chapter(project["id"], "Two", "word " * 100, root=root)
+            first = projects.add_chapter(project["id"], "One", "word " * 500, root=root)
+            second = projects.add_chapter(project["id"], "Two", "word " * 500, root=root)
 
-            sessions = projects.rebuild_sessions(project["id"], target_minutes=1, root=root)
+            sessions = projects.rebuild_sessions(project["id"], target_minutes=0, root=root)
 
             self.assertEqual(len(sessions), 2)
             loaded = projects.load_project(project["id"], root)
@@ -162,8 +162,8 @@ class ProjectStorageTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             project = projects.create_project("Book", root=root)
-            first = projects.add_chapter(project["id"], "One", "word " * 10, root=root)
-            second = projects.add_chapter(project["id"], "Two", "word " * 10, root=root)
+            first = projects.add_chapter(project["id"], "One", "word " * 100, root=root)
+            second = projects.add_chapter(project["id"], "Two", "word " * 100, root=root)
             third = projects.add_chapter(project["id"], "Three", "word " * 10, root=root)
             sessions = projects.rebuild_sessions(project["id"], target_minutes=20, root=root)
             session_id = sessions[0]["id"]
@@ -199,6 +199,26 @@ class ProjectStorageTests(unittest.TestCase):
                 loaded["sessions"][0]["chapter_ids"],
                 [first["id"], second["id"], third["id"]],
             )
+
+    def test_move_session_reorders_without_changing_membership(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            project = projects.create_project("Book", root=root)
+            first = projects.add_chapter(project["id"], "One", "word " * 500, root=root)
+            second = projects.add_chapter(project["id"], "Two", "word " * 500, root=root)
+            sessions = projects.rebuild_sessions(project["id"], target_minutes=1, root=root)
+            first_session, second_session = sessions
+
+            self.assertTrue(projects.move_session(project["id"], second_session["id"], -1, root=root))
+            loaded = projects.load_project(project["id"], root)
+            self.assertEqual(
+                [session["id"] for session in loaded["sessions"]],
+                [second_session["id"], first_session["id"]],
+            )
+            self.assertEqual(loaded["sessions"][0]["chapter_ids"], [second["id"]])
+            self.assertEqual(loaded["sessions"][1]["chapter_ids"], [first["id"]])
+
+            self.assertFalse(projects.move_session(project["id"], second_session["id"], -1, root=root))
 
     def test_refresh_project_outputs_marks_missing_and_generated(self):
         with tempfile.TemporaryDirectory() as tmp:

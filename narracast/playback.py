@@ -1,8 +1,8 @@
 """Audio playback engine with wall-clock position tracking.
 
-Uses afplay for basic playback on macOS.
 Uses ffplay (part of ffmpeg) for seeking to an offset when available;
-falls back to afplay from the beginning if ffplay is not installed.
+falls back to the platform audio helper from the beginning if ffplay is not
+installed.
 
 Position updates are fired to `on_position(ms: int)` every POLL_MS
 milliseconds from a background thread.  Callers must schedule any UI
@@ -17,6 +17,8 @@ import threading
 import time
 from pathlib import Path
 from typing import Callable, Optional
+
+from .platform import play_audio
 
 
 POLL_MS = 250  # position-update interval
@@ -156,11 +158,7 @@ def _launch(file_path: str, offset_ms: int) -> subprocess.Popen:
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,
         )
-    return subprocess.Popen(
-        ["afplay", file_path],
-        stdout=subprocess.DEVNULL,
-        stderr=subprocess.DEVNULL,
-    )
+    return play_audio(file_path)
 
 
 # ── Position persistence ──────────────────────────────────────────────────────

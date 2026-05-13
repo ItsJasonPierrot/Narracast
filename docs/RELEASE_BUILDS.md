@@ -35,6 +35,7 @@ Output:
 
 ```text
 dist/Narracast-macos.zip
+dist/Narracast-macos.zip.sha256
 ```
 
 The archive contains `Narracast.app`.
@@ -51,6 +52,7 @@ Output:
 
 ```text
 dist\Narracast-windows.zip
+dist\Narracast-windows.zip.sha256
 ```
 
 The archive contains the PyInstaller `Narracast` app directory. If you add a
@@ -68,6 +70,7 @@ Output:
 
 ```text
 dist/Narracast-linux.zip
+dist/Narracast-linux.zip.sha256
 ```
 
 The archive contains the PyInstaller `Narracast` app directory.
@@ -81,3 +84,6 @@ The archive contains the PyInstaller `Narracast` app directory.
   platform app-data folder at runtime and are not bundled into releases.
 - Large local assets such as `reference.wav`, `raw_audio/`, and generated MP3s are
   not release inputs.
+- `requirements.lock` records the current resolved development environment. Use it
+  for reproducible rebuilds after validating it on the target OS.
+- Release archives get a sibling `.sha256` file. Publish both files together.

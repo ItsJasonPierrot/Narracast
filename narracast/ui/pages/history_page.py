@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import subprocess
 import json
 from pathlib import Path
 from typing import Optional
@@ -28,6 +27,7 @@ from narracast.output_files import (
     list_history_files,
 )
 from narracast.metadata import metadata_path_for_audio
+from narracast.platform import open_folder, play_audio, reveal_path
 from narracast.ui import icons
 from narracast.paths import OUTPUT_DIR
 from narracast.ui.widgets import Card, Divider, MutedLabel
@@ -218,18 +218,14 @@ class HistoryPage(QWidget):
 
     def _play_audio(self) -> None:
         if self._selected_path:
-            subprocess.Popen(
-                ["afplay", str(self._selected_path)],
-                stdout=subprocess.DEVNULL,
-                stderr=subprocess.DEVNULL,
-            )
+            play_audio(self._selected_path)
 
     def _reveal_selected(self) -> None:
         if self._selected_path:
-            subprocess.Popen(["open", "-R", str(self._selected_path)])
+            reveal_path(self._selected_path)
 
     def _open_output_folder(self) -> None:
-        subprocess.Popen(["open", str(OUTPUT_DIR)])
+        open_folder(OUTPUT_DIR)
 
     def _delete_selected(self) -> None:
         if not self._selected_path:

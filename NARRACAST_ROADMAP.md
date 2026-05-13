@@ -43,6 +43,7 @@ Infrastructure.
 - Automatic chapter splitting from pasted text or imported file (heading detection, custom markers, single-chapter fallback)
 - Import source metadata stored per chapter; sessions rebuilt automatically after import
 - Reading sessions: estimated-duration splits, progress tracking, mark complete, rename, split after chapter, merge with next
+- Manual session reorder: Up / Down controls persist session order without changing chapter membership
 - Session-level reader launch: Read Session opens all generated chapters as a queue; Next chapter advances without leaving the reader
 - M4B audiobook export: chapter audit table, skip-missing toggle, ffmpeg concat + FFmetadata mux, QThread progress, Export M4B button in Projects
 
@@ -53,10 +54,11 @@ Infrastructure.
 - ID3 tags (title, album, track, artist) on every generated MP3
 - Persistent app-data `settings.json`: voice, speed, preset, title, part, pauses, theme, geometry, last page, all reader display options
 - User data separated from the repo/app bundle: projects, voices, reference files, generated output, and settings live under the platform app-data folder with non-destructive legacy migration
-- Text/PDF import size guard, audio-path validation for reader/reveal actions, and escaped ffmpeg concat paths for M4B export
+- Text/PDF import size guard, audio-path validation for reader/reveal actions, escaped ffmpeg concat paths for M4B export, and in-app privacy note for sidecar contents
+- Platform shell helper for play audio, reveal file, open folder, and log directory behavior across macOS / Windows / Linux
 - macOS app bundle with branded `.icns`, splash screen, background model loader, `~/Library/Logs/Narracast.log` for launch errors
-- Cross-platform release packaging helper and release build notes for macOS, Windows, and Linux
-- 190 backend tests
+- Cross-platform release packaging helper, release build notes for macOS / Windows / Linux, generated SHA-256 archive checksums, and `requirements.lock`
+- 193 backend tests
 
 ---
 
@@ -64,7 +66,7 @@ Infrastructure.
 
 All v1 features are working. The next developer can start from `app.py`, `narracast/ui/main_window.py`, and `narracast/ui/pages/`. The backend is split cleanly under `narracast/`. All icons come from `narracast/ui/icons.py` — never hardcode mdi6 strings in pages. Tests run with `venv/bin/python -m unittest discover -s tests`; `pytest` is optional if installed.
 
-Platform note: release packaging docs exist for all three desktop OSes, but runtime launch/play/reveal behavior is still macOS-first (`afplay` and `open -R` / `open`). Abstract those commands into `narracast/platform.py` before calling Windows/Linux support complete.
+Platform note: release packaging docs exist for all three desktop OSes, and play/reveal/open-folder calls are centralized in `narracast/platform.py`. Windows/Linux still need real-machine smoke tests before calling cross-platform runtime support complete.
 
 ---
 
@@ -93,37 +95,7 @@ Items are ordered by suggested build sequence. Difficulty and risk use the 1–5
 
 ---
 
-### 2 · Voice Library Polish
-
-**Why:** Saved voices exist and work, but the transcript editing flow is friction-heavy.
-
-**Scope:**
-- Edit a saved voice's transcript in-place on the Voice Reference page without re-extracting the clip.
-- Set a saved voice as the active `reference.wav` with one click.
-- Persistent sample preview file per voice (generated once, reused).
-
-| User Value | Difficulty | Risk |
-|---:|---:|---:|
-| 3 | 2 | 2 |
-
----
-
-### 3 · Manual Session Reorder
-
-**Why:** Projects page currently lists sessions in the order they were built. Users need to reorganize sessions after edits without rebuilding all sessions.
-
-**Scope:**
-- Drag-and-drop reorder in the session tree, or Up / Down buttons.
-- Persist the new order in project JSON.
-- No change to session content or chapter membership.
-
-| User Value | Difficulty | Risk |
-|---:|---:|---:|
-| 3 | 2 | 1 |
-
----
-
-### 4 · Project Import from Existing MP3 Folder
+### 2 · Project Import from Existing MP3 Folder
 
 **Why:** Users who already have generated MP3s outside Narracast can't bring them into a project without re-generating.
 
@@ -139,9 +111,9 @@ Items are ordered by suggested build sequence. Difficulty and risk use the 1–5
 
 ---
 
-### 5 · Security / Privacy Hardening Follow-up
+### 3 · Security / Privacy Hardening Follow-up
 
-**Status:** First pass complete. Keep this as a release checklist item.
+**Status:** Mostly complete. Keep this as a release checklist item.
 
 **Done:**
 - Runtime data moved to platform app-data storage with non-destructive migration from legacy repo-root folders.
@@ -149,12 +121,14 @@ Items are ordered by suggested build sequence. Difficulty and risk use the 1–5
 - Project reader/reveal actions require existing supported audio files.
 - M4B concat files escape quotes/backslashes and reject newline-bearing paths.
 - Source launcher no longer hardcodes a personal repository path.
+- Help page documents that sidecars can store source text, timing data, bookmarks, and reader position.
+- Release archives get SHA-256 checksum files from `scripts/build_bundle.py`.
+- `requirements.lock` captures the current resolved dependency set for reproducible local builds.
+- `narracast/platform.py` centralizes OS-specific play/reveal/open-folder commands.
 
 **Remaining before public distribution:**
 - Add signed/notarized macOS builds and Windows signing if distributing outside local/dev machines.
-- Publish SHA-256 checksums for release archives.
-- Pin or lock dependencies for reproducible release builds.
-- Add a short in-app privacy note that sidecars can store source text, reader position, and bookmarks.
+- Smoke test Windows/Linux bundles on the target machines.
 
 | User Value | Difficulty | Risk |
 |---:|---:|---:|
@@ -162,7 +136,7 @@ Items are ordered by suggested build sequence. Difficulty and risk use the 1–5
 
 ---
 
-### 6 · Streaming Chunk Playback
+### 4 · Streaming Chunk Playback
 
 **Why:** Long chapters take minutes to generate. Streaming lets the user start listening after the first chunk instead of waiting for the full MP3.
 
@@ -180,7 +154,7 @@ Items are ordered by suggested build sequence. Difficulty and risk use the 1–5
 
 ---
 
-### 7 · Local TTS Backend Process
+### 5 · Local TTS Backend Process
 
 **Why:** Moving F5-TTS into a persistent worker process isolates crashes, simplifies cancellation, and enables streaming in a cleaner way.
 
@@ -197,7 +171,7 @@ Items are ordered by suggested build sequence. Difficulty and risk use the 1–5
 
 ---
 
-### 8 · Word-Level Highlighting — Deferred
+### 6 · Word-Level Highlighting — Deferred
 
 **Why deferred:** F5-TTS produces no word timestamps. Forced alignment (e.g., `whisperx`, `montreal-forced-aligner`) requires a full second-pass over the generated audio and adds a heavy dependency. Sentence-level highlighting already covers most of the user value at a fraction of the complexity.
 
@@ -209,7 +183,7 @@ Items are ordered by suggested build sequence. Difficulty and risk use the 1–5
 
 ---
 
-### 9 · Mobile Companion App — Deferred
+### 7 · Mobile Companion App — Deferred
 
 This is a separate product. Revisit after the desktop app has a stable release history and a clear sync story.
 

@@ -30,6 +30,7 @@ from PySide6.QtWidgets import (
 from narracast.audio_generation import generate_core
 from narracast.audio_polish import AudioPolishSettings, VALID_BITRATES
 from narracast.output_files import load_file
+from narracast.platform import play_audio, reveal_path
 from narracast.presets import DEFAULT_PRESET, GENERATION_PRESETS
 from narracast.queue_manager import add_to_queue
 from narracast.text_cleanup import (
@@ -762,16 +763,12 @@ class GeneratePage(QWidget):
             return
         if self._play_proc and self._play_proc.poll() is None:
             self._play_proc.terminate()
-        self._play_proc = subprocess.Popen(
-            ["afplay", self._last_output_path],
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL,
-        )
+        self._play_proc = play_audio(self._last_output_path)
 
     def _reveal_output(self) -> None:
         if not self._last_output_path:
             return
-        subprocess.Popen(["open", "-R", self._last_output_path])
+        reveal_path(self._last_output_path)
 
     def _open_benchmark(self) -> None:
         voices = get_voice_files()

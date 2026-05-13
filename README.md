@@ -302,9 +302,10 @@ Saved voices appear in the Generate voice selector immediately. Each saved trans
 The saved voice library also lets you:
 
 - rename a saved voice and update its notes
+- edit a saved voice transcript without re-extracting audio
 - delete a saved voice profile
 - set a saved voice as the active reference
-- generate a short sample preview from saved profile audio and transcript
+- generate and reuse short sample previews from saved profile audio and transcript
 
 ### History
 
@@ -316,6 +317,7 @@ Organise long texts into projects. Each project holds a list of chapters, each w
 
 - **Automatic chapter splitting** — paste a long text and let the app detect headings and split into draft chapters for review before queueing.
 - **Reading sessions** — break chapters into manageable estimated-duration sessions with progress tracking.
+- **Manual session order** — move sessions up or down after splitting/merging without changing their chapters.
 - **Read Session** — open the first generated chapter in a session directly in the reading companion; a Next chapter button advances through the rest of the session without leaving the reader.
 - **Export M4B** — combine all generated chapters into a single `.m4b` audiobook file with native chapter markers, ready for any audiobook player. A chapter audit table shows readiness before export; chapters without audio can be skipped or blocked depending on your choice.
 
@@ -330,9 +332,8 @@ Quick reference guide built into the app.
 The core feature set — generation, reading companion, project mode, session tracking, and M4B export — is complete. Active development is focused on:
 
 ### Near-term polish
-- **Voice library polish** — edit saved transcripts in place and switch a saved voice into the active reference slot
-- **Manual session reorder** — drag sessions into a different order within a project
 - **Project import flow** — import an existing folder of MP3s as a project
+- **Release smoke testing** — verify packaged builds on Windows and Linux hardware
 
 ### Larger features
 - **Async MP3 finalization** — data-gated: run real long-chapter generations and check the Timing Analysis dialog; only worth building if finalization is a meaningful share of total time
@@ -358,6 +359,8 @@ Linux:   ~/.local/share/narracast/
 Set `NARRACAST_DATA_DIR=/path/to/data` to override this for development or portable installs. On first launch, Narracast copies old repo-root runtime folders into the app-data folder without deleting the originals.
 
 Sidecar `.json` files may contain source text, title/part metadata, timing data, reader position, and bookmarks. Everything stays local unless you manually share the files.
+
+Release archives built with `scripts/build_bundle.py` include a matching `.sha256` checksum file. `requirements.lock` records the current resolved Python environment for reproducible local builds.
 
 ## File naming
 

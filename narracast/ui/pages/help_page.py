@@ -126,9 +126,7 @@ class HelpPage(QWidget):
             card_layout.setSpacing(6)
 
             q_label = QLabel(question)
-            q_label.setStyleSheet(
-                "background: transparent; color: #e9f1ff; font-size: 14px; font-weight: 600;"
-            )
+            q_label.setStyleSheet("background: transparent; font-size: 14px; font-weight: 600;")
             card_layout.addWidget(q_label)
 
             a_label = QLabel(answer)

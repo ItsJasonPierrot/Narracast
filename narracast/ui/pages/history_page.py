@@ -13,6 +13,7 @@ from PySide6.QtWidgets import (
     QHeaderView,
     QLabel,
     QLineEdit,
+    QMessageBox,
     QPushButton,
     QSizePolicy,
     QTreeWidget,
@@ -233,6 +234,15 @@ class HistoryPage(QWidget):
     def _delete_selected(self) -> None:
         if not self._selected_path:
             return
+        confirmed = QMessageBox.question(
+            self,
+            "Delete file?",
+            f"Delete \"{self._selected_path.name}\" and its sidecar?\n\nThis cannot be undone.",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            QMessageBox.StandardButton.No,
+        )
+        if confirmed != QMessageBox.StandardButton.Yes:
+            return
         meta = metadata_path_for_audio(self._selected_path)
         meta.unlink(missing_ok=True)
         self._selected_path.unlink(missing_ok=True)
@@ -240,5 +250,17 @@ class HistoryPage(QWidget):
         self._refresh()
 
     def _clear_history(self) -> None:
+        n = len(self._files)
+        if n == 0:
+            return
+        confirmed = QMessageBox.question(
+            self,
+            "Clear all history?",
+            f"Permanently delete all {n} generated file{'s' if n != 1 else ''} and their sidecars?\n\nThis cannot be undone.",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            QMessageBox.StandardButton.No,
+        )
+        if confirmed != QMessageBox.StandardButton.Yes:
+            return
         delete_all_history()
         self._refresh()

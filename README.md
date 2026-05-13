@@ -89,7 +89,8 @@ Clone the repo and set up a Python 3.11 virtual environment:
 git clone https://github.com/your-username/Narracast.git
 cd Narracast
 python3.11 -m venv venv
-venv/bin/pip install -r requirements.txt
+venv/bin/python -m pip install --upgrade pip
+venv/bin/python -m pip install -e .
 ```
 
 You will also need `ffmpeg` installed on your system:
@@ -101,8 +102,54 @@ brew install ffmpeg
 Then launch the app:
 
 ```bash
-venv/bin/python3 app.py
+venv/bin/python app.py
+# or
+venv/bin/python -m narracast
 ```
+
+---
+
+## Project layout
+
+Narracast uses a standard flat Python application layout:
+
+```text
+app.py          # PySide6 entry point
+narracast/      # importable application package
+narracast/ui/   # PySide6 interface layer
+tests/          # unittest suite
+scripts/        # release and app-bundle helper scripts
+docs/           # developer/release documentation
+assets/         # app icons and bundled UI images
+pyproject.toml  # package metadata and build configuration
+```
+
+This keeps importable code inside the `narracast` package, tests in a dedicated
+top-level `tests/` directory, and build/release helpers outside the runtime
+package.
+
+---
+
+## Release bundles
+
+Release bundles are built with PyInstaller on each target operating system.
+PyInstaller is not a cross-compiler, so build macOS bundles on macOS, Windows
+bundles on Windows, and Linux bundles on Linux.
+
+Install build dependencies:
+
+```bash
+venv/bin/python -m pip install -e ".[build]"
+```
+
+Build the bundle for the current OS:
+
+```bash
+venv/bin/python scripts/build_bundle.py
+```
+
+See [docs/RELEASE_BUILDS.md](docs/RELEASE_BUILDS.md) for macOS, Windows, and
+Linux release steps.
 
 ---
 

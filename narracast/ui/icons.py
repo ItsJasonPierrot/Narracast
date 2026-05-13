@@ -73,3 +73,8 @@ CLOCK            = "mdi6.clock-outline"
 TUNE             = "mdi6.tune-variant"
 PLAYLIST_PLAY    = "mdi6.playlist-play"
 FILE_MUSIC       = "mdi6.file-music-outline"
+# Sidebar navigation
+PROJECTS         = "mdi6.book-multiple"
+QUEUE_NAV        = "mdi6.playlist-music"
+HISTORY          = "mdi6.history"
+HELP_CIRCLE      = "mdi6.help-circle-outline"

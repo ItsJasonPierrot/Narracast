@@ -1,0 +1,41 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "narracast"
+version = "1.0.0"
+description = "Offline audiobook and reading companion powered by F5-TTS."
+readme = "README.md"
+requires-python = ">=3.11,<3.13"
+license = { file = "LICENSE" }
+authors = [
+    { name = "Jason Pierrot" },
+]
+dependencies = [
+    "f5-tts",
+    "torch",
+    "pydub",
+    "soundfile",
+    "pdfminer.six",
+    "mutagen",
+    "PySide6",
+    "qtawesome",
+]
+
+[project.optional-dependencies]
+build = [
+    "pyinstaller>=6.0",
+]
+
+[project.scripts]
+narracast = "app:main"
+
+[tool.setuptools]
+py-modules = ["app"]
+
+[tool.setuptools.packages.find]
+include = ["narracast*"]
+
+[tool.setuptools.package-data]
+narracast = []

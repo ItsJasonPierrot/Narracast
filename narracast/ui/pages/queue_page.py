@@ -27,7 +27,7 @@ from narracast.queue_manager import (
     list_jobs,
     retry_job,
 )
-from narracast.ui.widgets import Card, MutedLabel, SectionLabel
+from narracast.ui.widgets import Card, MutedLabel
 
 
 _STATUS_COLORS = {

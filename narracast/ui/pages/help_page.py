@@ -12,7 +12,7 @@ from PySide6.QtWidgets import (
 )
 
 from narracast.ui import icons
-from narracast.ui.widgets import Card, MutedLabel, SectionLabel
+from narracast.ui.widgets import Card, MutedLabel
 
 
 # (icon_constant, title, answer)

@@ -30,7 +30,7 @@ from narracast.output_files import (
 from narracast.metadata import metadata_path_for_audio
 from narracast.ui import icons
 from narracast.paths import OUTPUT_DIR
-from narracast.ui.widgets import Card, Divider, MutedLabel, SectionLabel
+from narracast.ui.widgets import Card, Divider, MutedLabel
 
 
 class HistoryPage(QWidget):

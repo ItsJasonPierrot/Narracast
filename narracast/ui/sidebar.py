@@ -23,13 +23,13 @@ from narracast.ui.widgets import Divider, MutedLabel, StatusDot
 _ICON_PATH = APP_DIR / "assets" / "Narracast_Icon.png"
 
 _NAV_ITEMS = [
-    ("generate",  "Generate",       "mdi6.microphone"),
-    ("projects",  "Projects",       "mdi6.book-multiple"),
-    ("queue",     "Queue",          "mdi6.playlist-music"),
-    ("voice",     "Voice",          "mdi6.account-voice"),
-    ("history",   "History",        "mdi6.history"),
-    ("read",      "Read",           "mdi6.book-open-page-variant"),
-    ("help",      "Help",           "mdi6.help-circle-outline"),
+    ("generate",  "Generate",       icons.MICROPHONE),
+    ("projects",  "Projects",       icons.PROJECTS),
+    ("queue",     "Queue",          icons.QUEUE_NAV),
+    ("voice",     "Voice",          icons.SAVE_VOICE),
+    ("history",   "History",        icons.HISTORY),
+    ("read",      "Read",           icons.BOOK_OPEN),
+    ("help",      "Help",           icons.HELP_CIRCLE),
 ]
 
 

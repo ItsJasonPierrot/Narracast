@@ -83,7 +83,7 @@ def _clean_settings(raw: dict[str, Any]) -> dict[str, Any]:
         settings["app_theme"] = app_theme
 
     current_page = raw.get("current_page")
-    if current_page in ("generate", "queue", "voice", "history", "read", "help"):
+    if current_page in ("generate", "projects", "queue", "voice", "history", "read", "help"):
         settings["current_page"] = current_page
 
     reader_theme = raw.get("reader_theme")

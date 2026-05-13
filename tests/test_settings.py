@@ -116,7 +116,7 @@ class SettingsTests(unittest.TestCase):
                     "paragraph_pause_ms": 1200,
                     "sentence_pause_ms": 300,
                     "app_theme": "Light",
-                    "current_page": "history",
+                    "current_page": "projects",
                     "reader_theme": "Warm",
                     "reader_spacing": "Relaxed",
                     "reader_font": "Courier New",
@@ -138,7 +138,7 @@ class SettingsTests(unittest.TestCase):
             self.assertEqual(settings["paragraph_pause_ms"], 1200)
             self.assertEqual(settings["sentence_pause_ms"], 300)
             self.assertEqual(settings["app_theme"], "Light")
-            self.assertEqual(settings["current_page"], "history")
+            self.assertEqual(settings["current_page"], "projects")
             self.assertEqual(settings["reader_theme"], "Warm")
             self.assertEqual(settings["reader_spacing"], "Relaxed")
             self.assertEqual(settings["reader_font"], "Courier New")

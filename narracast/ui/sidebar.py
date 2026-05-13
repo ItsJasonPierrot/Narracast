@@ -23,6 +23,7 @@ _ICON_PATH = APP_DIR / "assets" / "Narracast_Icon.png"
 
 _NAV_ITEMS = [
     ("generate", "🎙  Generate"),
+    ("projects", "📚  Projects"),
     ("queue", "📋  Queue"),
     ("voice", "🎤  Voice Reference"),
     ("history", "📁  History"),

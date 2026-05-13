@@ -1,6 +1,7 @@
 import queue
 import unittest
 
+from narracast.audio_polish import AudioPolishSettings
 from narracast import queue_manager
 from narracast.queue_manager import Job
 
@@ -150,6 +151,101 @@ class QueueManagerTests(unittest.TestCase):
 
         self.assertEqual(result, "queued")
         self.assertEqual(retry.paragraph_pause_ms, 800)
+
+    def test_retry_preserves_audio_polish_settings(self):
+        polish = AudioPolishSettings(
+            bitrate="320k",
+            normalize=True,
+            fade_in_ms=250,
+            fade_out_ms=500,
+            trim_silence=True,
+        )
+        failed = Job(
+            text="text",
+            title="Book",
+            part="1",
+            voice="v",
+            speed=1.0,
+            preset="Balanced",
+            audio_polish=polish.to_dict(),
+            status="error",
+        )
+        with queue_manager._jobs_lock:
+            queue_manager._jobs.append(failed)
+
+        result, retry = queue_manager.retry_job(failed.id)
+
+        self.assertEqual(result, "queued")
+        self.assertEqual(retry.audio_polish, polish.to_dict())
+
+    def test_retry_preserves_project_chapter_ids(self):
+        failed = Job(
+            text="text",
+            title="Book",
+            part="Chapter 1",
+            voice="v",
+            status="error",
+            project_id="project-1",
+            chapter_id="chapter-1",
+        )
+        with queue_manager._jobs_lock:
+            queue_manager._jobs.append(failed)
+
+        result, retry = queue_manager.retry_job(failed.id)
+
+        self.assertEqual(result, "queued")
+        self.assertEqual(retry.project_id, "project-1")
+        self.assertEqual(retry.chapter_id, "chapter-1")
+
+    def test_add_to_queue_preserves_audio_polish_settings(self):
+        original_get_voice_files = queue_manager.get_voice_files
+        polish = AudioPolishSettings(
+            bitrate="256k",
+            normalize=True,
+            fade_in_ms=100,
+            fade_out_ms=200,
+            trim_silence=True,
+        )
+        queue_manager.get_voice_files = lambda: {"voice": "/tmp/reference.wav"}
+        try:
+            result = queue_manager.add_to_queue(
+                "Some text.",
+                "voice",
+                1.0,
+                "Book",
+                "1",
+                "Balanced",
+                audio_polish=polish,
+            )
+        finally:
+            queue_manager.get_voice_files = original_get_voice_files
+
+        self.assertIn("Queued", result)
+        jobs = queue_manager.list_jobs()
+        self.assertEqual(len(jobs), 1)
+        self.assertEqual(jobs[0].audio_polish, polish.to_dict())
+
+    def test_add_to_queue_stores_project_chapter_ids(self):
+        original_get_voice_files = queue_manager.get_voice_files
+        queue_manager.get_voice_files = lambda: {"voice": "/tmp/reference.wav"}
+        try:
+            result = queue_manager.add_to_queue(
+                "Some text.",
+                "voice",
+                1.0,
+                "Book",
+                "Chapter 1",
+                "Balanced",
+                project_id="project-1",
+                chapter_id="chapter-1",
+            )
+        finally:
+            queue_manager.get_voice_files = original_get_voice_files
+
+        self.assertIn("Queued", result)
+        job = queue_manager.list_jobs()[0]
+        self.assertEqual(job.project_id, "project-1")
+        self.assertEqual(job.chapter_id, "chapter-1")
 
     def test_add_to_queue_rejects_empty_text(self):
         result = queue_manager.add_to_queue("   ", "any_voice", 1.0, "", "", "Balanced")

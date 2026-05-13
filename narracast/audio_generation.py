@@ -162,6 +162,8 @@ def _export_generation_outputs(
     sentence_pause_ms: int,
     audio_polish: AudioPolishSettings | None,
     timings: dict[str, float],
+    project_id: str = "",
+    chapter_id: str = "",
 ) -> Path:
     """Write final MP3, ID3 tags, and metadata sidecar."""
     export_start = time.perf_counter()
@@ -191,6 +193,8 @@ def _export_generation_outputs(
         sentence_pause_ms=sentence_pause_ms,
         generation_timings={k: round(v, 4) for k, v in timings.items() if not k.startswith("_")},
         audio_polish=audio_polish,
+        project_id=project_id,
+        chapter_id=chapter_id,
     )
     timings["metadata_write_s"] = time.perf_counter() - metadata_start
     timings["finalize_s"] = timings["mp3_export_s"] + timings["id3_s"] + timings["metadata_write_s"]
@@ -214,6 +218,8 @@ def generate_core(
     preset_name=DEFAULT_PRESET, paragraph_pause_ms: int = 500,
     sentence_pause_ms: int = 0,
     audio_polish: AudioPolishSettings | None = None,
+    project_id: str = "",
+    chapter_id: str = "",
 ):
     """Core generation — progress-callback agnostic."""
     total_start = time.perf_counter()
@@ -342,6 +348,8 @@ def generate_core(
         sentence_pause_ms=sentence_pause_ms,
         audio_polish=audio_polish,
         timings=timings,
+        project_id=project_id,
+        chapter_id=chapter_id,
     )
 
     mins = int(len(combined) / 60000)

@@ -30,6 +30,8 @@ def write_generation_metadata(
     sentence_pause_ms: int = 0,
     generation_timings: dict[str, float] | None = None,
     audio_polish: Any = None,
+    project_id: str = "",
+    chapter_id: str = "",
 ) -> Path:
     audio_path = Path(audio_path)
     metadata_path = metadata_path_for_audio(audio_path)
@@ -51,6 +53,11 @@ def write_generation_metadata(
         "timeline": timeline,
         "highlight_units": list(highlight_units or []),
     }
+    if project_id or chapter_id:
+        payload["project"] = {
+            "project_id": project_id,
+            "chapter_id": chapter_id,
+        }
     if generation_timings:
         payload["generation_timings"] = dict(generation_timings)
     if audio_polish is not None:

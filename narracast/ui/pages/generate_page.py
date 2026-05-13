@@ -729,7 +729,18 @@ class GeneratePage(QWidget):
         preset = self.mode_combo.currentText()
         pause_ms = self.pause_slider.value()
         sentence_pause_ms = self.sentence_pause_slider.value()
-        msg = add_to_queue(text, voice, speed, title, part, preset, pause_ms, sentence_pause_ms)
+        polish = self._current_polish()
+        msg = add_to_queue(
+            text,
+            voice,
+            speed,
+            title,
+            part,
+            preset,
+            pause_ms,
+            sentence_pause_ms,
+            audio_polish=polish,
+        )
         self.job_desc_label.setText(msg)
 
     def _play_last(self) -> None:

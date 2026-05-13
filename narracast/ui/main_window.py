@@ -17,6 +17,7 @@ from narracast.ui.sidebar import Sidebar
 from narracast.ui.signals import get_signals
 from narracast.ui.theme import apply_theme
 from narracast.ui.pages.generate_page import GeneratePage
+from narracast.ui.pages.projects_page import ProjectsPage
 from narracast.ui.pages.queue_page import QueuePage
 from narracast.ui.pages.voice_page import VoicePage
 from narracast.ui.pages.history_page import HistoryPage
@@ -26,11 +27,12 @@ from narracast.ui.pages.help_page import HelpPage
 
 PAGE_INDEX = {
     "generate": 0,
-    "queue": 1,
-    "voice": 2,
-    "history": 3,
-    "read": 4,
-    "help": 5,
+    "projects": 1,
+    "queue": 2,
+    "voice": 3,
+    "history": 4,
+    "read": 5,
+    "help": 6,
 }
 
 
@@ -75,6 +77,7 @@ class MainWindow(QMainWindow):
         # Page stack
         self.stack = QStackedWidget()
         self.generate_page = GeneratePage()
+        self.projects_page = ProjectsPage()
         self.queue_page = QueuePage()
         self.voice_page = VoicePage()
         self.history_page = HistoryPage()
@@ -83,6 +86,7 @@ class MainWindow(QMainWindow):
 
         for page in [
             self.generate_page,
+            self.projects_page,
             self.queue_page,
             self.voice_page,
             self.history_page,

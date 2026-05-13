@@ -5,8 +5,9 @@ import threading
 import time
 import uuid
 from dataclasses import dataclass, field, replace
-from typing import Optional
+from typing import Optional, Any
 
+from .audio_polish import AudioPolishSettings
 from .audio_generation import generate_core
 from .presets import DEFAULT_PRESET
 from .voices import get_voice_files
@@ -23,6 +24,9 @@ class Job:
     preset: str = DEFAULT_PRESET
     paragraph_pause_ms: int = 500
     sentence_pause_ms: int = 0
+    audio_polish: Optional[dict[str, Any]] = None
+    project_id: str = ""
+    chapter_id: str = ""
     status: str = "pending"
     progress: str = ""
     output_path: Optional[str] = None
@@ -93,6 +97,9 @@ def retry_job(job_id: str) -> tuple[str, Optional[Job]]:
             preset=job.preset,
             paragraph_pause_ms=job.paragraph_pause_ms,
             sentence_pause_ms=job.sentence_pause_ms,
+            audio_polish=dict(job.audio_polish) if job.audio_polish else None,
+            project_id=job.project_id,
+            chapter_id=job.chapter_id,
         )
         _jobs.append(retry)
     _work_q.put(retry.id)
@@ -129,13 +136,28 @@ def _worker():
                 job.preset,
                 paragraph_pause_ms=job.paragraph_pause_ms,
                 sentence_pause_ms=job.sentence_pause_ms,
+                audio_polish=(
+                    AudioPolishSettings.from_dict(job.audio_polish)
+                    if job.audio_polish
+                    else None
+                ),
+                project_id=job.project_id,
+                chapter_id=job.chapter_id,
             )
             job.status = "done"
             job.output_path = path
             job.progress = "Complete"
+            if job.project_id and job.chapter_id:
+                from .projects import mark_chapter_generated
+
+                mark_chapter_generated(job.project_id, job.chapter_id, path)
         except Exception as e:
             job.status = "error"
             job.error_msg = str(e)[:200]
+            if job.project_id and job.chapter_id:
+                from .projects import mark_chapter_error
+
+                mark_chapter_error(job.project_id, job.chapter_id)
         finally:
             _work_q.task_done()
 
@@ -153,6 +175,9 @@ def add_to_queue(
     text, voice_name, speed, title, part,
     preset_name=DEFAULT_PRESET, paragraph_pause_ms: int = 500,
     sentence_pause_ms: int = 0,
+    audio_polish: AudioPolishSettings | dict[str, Any] | None = None,
+    project_id: str = "",
+    chapter_id: str = "",
 ):
     if not text.strip():
         return "⚠️  Please paste some text first."
@@ -168,11 +193,24 @@ def add_to_queue(
         preset=preset_name,
         paragraph_pause_ms=paragraph_pause_ms,
         sentence_pause_ms=sentence_pause_ms,
+        audio_polish=(
+            audio_polish.to_dict()
+            if hasattr(audio_polish, "to_dict")
+            else dict(audio_polish)
+            if audio_polish
+            else None
+        ),
+        project_id=project_id,
+        chapter_id=chapter_id,
     )
     with _jobs_lock:
         jobs_ahead = sum(1 for j in _jobs if j.status in ("pending", "generating"))
         _jobs.append(job)
     _work_q.put(job.id)
+    if project_id and chapter_id:
+        from .projects import mark_chapter_queued
+
+        mark_chapter_queued(project_id, chapter_id)
     label = f'"{title}"' if title else f'"{text[:40]}…"'
     msg = f"📋  Queued: {label}"
     if jobs_ahead:

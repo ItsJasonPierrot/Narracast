@@ -15,6 +15,7 @@ class BackendHelperTests(unittest.TestCase):
         self.assertEqual(paths.OUTPUT_DIR, paths.APP_DIR / "output")
         self.assertEqual(paths.CLEAN_VOICE, paths.APP_DIR / "clean_voice")
         self.assertEqual(paths.VOICES_DIR, paths.APP_DIR / "voices")
+        self.assertEqual(paths.PROJECTS_DIR, paths.APP_DIR / "projects")
         self.assertEqual(paths.REFERENCE, paths.APP_DIR / "reference.wav")
         self.assertEqual(paths.REFERENCE_TEXT, paths.APP_DIR / "reference.txt")
 
@@ -429,6 +430,32 @@ class BackendHelperTests(unittest.TestCase):
             payload = json.loads(meta_path.read_text(encoding="utf-8"))
             self.assertEqual(payload["paragraph_pause_ms"], 1200)
             self.assertEqual(payload["sentence_pause_ms"], 300)
+
+    def test_write_generation_metadata_stores_project_link(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            audio_path = Path(tmp) / "Book.mp3"
+            audio_path.write_bytes(b"fake mp3")
+
+            meta_path = metadata.write_generation_metadata(
+                audio_path,
+                source_text="Hello.",
+                timeline=[],
+                title="Book",
+                part="Chapter 1",
+                voice="Voice",
+                speed=1.0,
+                preset="Balanced",
+                preset_settings={"chunk_size": 750, "nfe_step": 32},
+                duration_ms=0,
+                project_id="project-1",
+                chapter_id="chapter-1",
+            )
+
+            payload = json.loads(meta_path.read_text(encoding="utf-8"))
+            self.assertEqual(
+                payload["project"],
+                {"project_id": "project-1", "chapter_id": "chapter-1"},
+            )
 
     def test_metadata_path_for_audio_returns_json_sibling(self):
         self.assertEqual(

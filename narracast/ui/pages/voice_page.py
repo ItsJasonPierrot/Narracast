@@ -418,7 +418,11 @@ class VoicePage(QWidget):
         if not self._preview_path:
             return
         self._stop_preview()
-        self._preview_proc = play_audio(self._preview_path)
+        try:
+            self._preview_proc = play_audio(self._preview_path)
+        except Exception as exc:
+            self._status_label.setText(f"Cannot play preview: {exc}")
+            return
         self.stop_btn.setEnabled(True)
 
     def _stop_preview(self) -> None:
@@ -560,8 +564,13 @@ class VoicePage(QWidget):
     def _on_voice_preview_done(self, path: str) -> None:
         self._preview_path = path
         self._stop_preview()
-        self._preview_proc = play_audio(path)
-        self.stop_btn.setEnabled(True)
+        try:
+            self._preview_proc = play_audio(path)
+            self.stop_btn.setEnabled(True)
+        except Exception as exc:
+            self._status_label.setText(f"Cannot play preview: {exc}")
+            self.preview_profile_btn.setEnabled(self.library_combo.count() > 0)
+            return
         self.preview_profile_btn.setEnabled(self.library_combo.count() > 0)
         self._status_label.setText("Saved-voice preview ready.")
 

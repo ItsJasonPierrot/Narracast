@@ -144,7 +144,12 @@ def _ffplay_available() -> bool:
 
 
 def _launch(file_path: str, offset_ms: int) -> subprocess.Popen:
-    """Start audio playback, seeking to `offset_ms` when possible."""
+    """Start audio playback, seeking to ``offset_ms`` when possible.
+
+    Seeking requires ffplay (part of ffmpeg).  When ffplay is not available the
+    file plays from the beginning regardless of ``offset_ms``; this is a known
+    limitation on systems without ffmpeg installed.
+    """
     if offset_ms > 500 and _ffplay_available():
         return subprocess.Popen(
             [
@@ -158,6 +163,9 @@ def _launch(file_path: str, offset_ms: int) -> subprocess.Popen:
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,
         )
+    # ffplay not available or offset within tolerance — fall back to the
+    # platform player from position 0.  On Windows this is the PowerShell
+    # MediaPlayer approach; on Linux this requires ffplay, mpg123, or aplay.
     return play_audio(file_path)
 
 

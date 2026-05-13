@@ -596,7 +596,10 @@ class ProjectsPage(QWidget):
         chapter = self._selected_chapter()
         output_path = chapter.get("output_path", "") if chapter else ""
         if is_supported_audio_path(output_path):
-            reveal_path(output_path)
+            try:
+                reveal_path(output_path)
+            except Exception as exc:
+                self.status_label.setText(f"Cannot reveal file: {exc}")
         else:
             self.status_label.setText("No revealable audio output found for this chapter.")
 

@@ -30,7 +30,7 @@ from PySide6.QtWidgets import (
 from narracast.audio_generation import generate_core
 from narracast.audio_polish import AudioPolishSettings, VALID_BITRATES
 from narracast.output_files import load_file
-from narracast.platform import play_audio, reveal_path
+from narracast.platform import play_audio, reveal_label, reveal_path
 from narracast.presets import DEFAULT_PRESET, GENERATION_PRESETS
 from narracast.queue_manager import add_to_queue
 from narracast.text_cleanup import (
@@ -469,7 +469,7 @@ class GeneratePage(QWidget):
         out_layout.addWidget(self._time_label)
 
         dl_row = QHBoxLayout()
-        self._reveal_btn = QPushButton("Reveal")
+        self._reveal_btn = QPushButton(reveal_label())
         self._reveal_btn.setIcon(icons.icon(icons.REVEAL))
         self._reveal_btn.setEnabled(False)
         self._reveal_btn.setFixedHeight(28)
@@ -763,12 +763,18 @@ class GeneratePage(QWidget):
             return
         if self._play_proc and self._play_proc.poll() is None:
             self._play_proc.terminate()
-        self._play_proc = play_audio(self._last_output_path)
+        try:
+            self._play_proc = play_audio(self._last_output_path)
+        except Exception as exc:
+            self.job_desc_label.setText(f"Cannot play audio: {exc}")
 
     def _reveal_output(self) -> None:
         if not self._last_output_path:
             return
-        reveal_path(self._last_output_path)
+        try:
+            reveal_path(self._last_output_path)
+        except Exception as exc:
+            self.job_desc_label.setText(f"Cannot reveal file: {exc}")
 
     def _open_benchmark(self) -> None:
         voices = get_voice_files()

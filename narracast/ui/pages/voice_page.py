@@ -378,7 +378,7 @@ class VoicePage(QWidget):
     def _extract(self) -> None:
         voice_path = self.voice_combo.currentData()
         if not voice_path:
-            self._status_label.setText("⚠️  Please select a voice track.")
+            self._status_label.setText("Please select a voice track.")
             return
         start = self.start_spin.value()
         duration = self.duration_spin.value()
@@ -429,11 +429,11 @@ class VoicePage(QWidget):
                 clip_duration_s=float(self.duration_spin.value()),
             )
         except Exception as exc:
-            self._status_label.setText(f"⚠️  {exc}")
+            self._status_label.setText(f"{exc}")
             return
 
         self._status_label.setText(
-            f"✅  Saved named voice: {profile.display_name}. It is now available in Generate."
+            f"Saved named voice: {profile.display_name}. It is now available in Generate."
         )
         self._refresh_library()
         get_signals().voice_library_changed.emit()
@@ -449,10 +449,10 @@ class VoicePage(QWidget):
                 self.profile_notes_edit.text(),
             )
         except Exception as exc:
-            self._status_label.setText(f"⚠️  {exc}")
+            self._status_label.setText(f"{exc}")
             return
 
-        self._status_label.setText(f"✅  Updated voice: {updated.display_name}.")
+        self._status_label.setText(f"Updated voice: {updated.display_name}.")
         self._refresh_library()
         get_signals().voice_library_changed.emit()
 
@@ -471,9 +471,9 @@ class VoicePage(QWidget):
             return
 
         if delete_voice_profile(profile.id):
-            self._status_label.setText(f"✅  Deleted voice: {profile.display_name}.")
+            self._status_label.setText(f"Deleted voice: {profile.display_name}.")
         else:
-            self._status_label.setText("⚠️  Voice profile was already missing.")
+            self._status_label.setText("Voice profile was already missing.")
         self._refresh_library()
         get_signals().voice_library_changed.emit()
 
@@ -484,10 +484,10 @@ class VoicePage(QWidget):
         try:
             set_profile_as_reference(profile.id)
         except Exception as exc:
-            self._status_label.setText(f"⚠️  {exc}")
+            self._status_label.setText(f"{exc}")
             return
         self._status_label.setText(
-            f"✅  “{profile.display_name}” is now the active reference. New generations will use this voice."
+            f'”{profile.display_name}” is now the active reference. New generations will use this voice.'
         )
         get_signals().voice_library_changed.emit()
 
@@ -497,7 +497,7 @@ class VoicePage(QWidget):
             return
         sample_text = self.sample_text_edit.text().strip()
         if not sample_text:
-            self._status_label.setText("⚠️  Enter sample text first.")
+            self._status_label.setText("Enter sample text first.")
             return
 
         self.preview_profile_btn.setEnabled(False)
@@ -522,8 +522,8 @@ class VoicePage(QWidget):
         )
         self.stop_btn.setEnabled(True)
         self.preview_profile_btn.setEnabled(self.library_combo.count() > 0)
-        self._status_label.setText("✅  Saved-voice preview ready.")
+        self._status_label.setText("Saved-voice preview ready.")
 
     def _on_voice_preview_error(self, err: str) -> None:
         self.preview_profile_btn.setEnabled(self.library_combo.count() > 0)
-        self._status_label.setText(f"⚠️  Could not preview saved voice: {err}")
+        self._status_label.setText(f"Could not preview saved voice: {err}")

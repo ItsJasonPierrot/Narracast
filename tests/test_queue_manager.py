@@ -249,11 +249,11 @@ class QueueManagerTests(unittest.TestCase):
 
     def test_add_to_queue_rejects_empty_text(self):
         result = queue_manager.add_to_queue("   ", "any_voice", 1.0, "", "", "Balanced")
-        self.assertIn("⚠️", result)
+        self.assertIn("paste some text", result)
 
     def test_add_to_queue_rejects_invalid_voice(self):
         result = queue_manager.add_to_queue("Some text.", "ghost_voice", 1.0, "", "", "Balanced")
-        self.assertIn("⚠️", result)
+        self.assertIn("reference voice", result)
 
 
 if __name__ == "__main__":

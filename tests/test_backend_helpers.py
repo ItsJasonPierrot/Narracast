@@ -96,7 +96,7 @@ class BackendHelperTests(unittest.TestCase):
         try:
             result = output_files.load_file(path)
             # Returns a user-facing warning string rather than raising
-            self.assertIn("⚠️", result)
+            self.assertIn("Only .txt and .pdf files are supported", result)
         finally:
             Path(path).unlink(missing_ok=True)
 

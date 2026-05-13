@@ -230,12 +230,12 @@ def get_clean_voice_choices():
 
 def extract_clip(voice_path, start_time, duration):
     if not voice_path:
-        return None, "⚠️  Please select a voice file."
+        return None, "Please select a voice file."
     try:
         start_time = float(start_time)
         duration = float(duration)
     except (ValueError, TypeError):
-        return None, "⚠️  Start time and duration must be numbers."
+        return None, "Start time and duration must be numbers."
     tmp = tempfile.NamedTemporaryFile(suffix=".wav", delete=False)
     tmp.close()
     result = subprocess.run(
@@ -256,8 +256,8 @@ def extract_clip(voice_path, start_time, duration):
         text=True,
     )
     if result.returncode != 0:
-        return None, f"⚠️  ffmpeg error: {result.stderr[:300]}"
-    return tmp.name, f"✅  Extracted {duration}s starting at {start_time}s."
+        return None, f"ffmpeg error: {result.stderr[:300]}"
+    return tmp.name, f"Extracted {duration}s starting at {start_time}s."
 
 
 def reference_text_path_for_audio(audio_path):
@@ -364,8 +364,8 @@ def set_profile_as_reference(profile_id: str) -> VoiceProfile:
 
 def save_clip(preview_path, ref_text=""):
     if not preview_path:
-        return "⚠️  Extract a clip first, then save."
+        return "Extract a clip first, then save."
     shutil.copy2(preview_path, str(REFERENCE))
     save_reference_text(ref_text)
     clear_reference_cache()
-    return "✅  reference.wav updated — new generations will use this voice."
+    return "reference.wav updated — new generations will use this voice."

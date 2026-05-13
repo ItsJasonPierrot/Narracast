@@ -15,15 +15,15 @@ from narracast.ui.widgets import Card, Divider, MutedLabel, SectionLabel
 
 _FAQ = [
     (
-        "🎙  How to generate",
+        "How to generate",
         (
             "Paste your text into the Generate tab, choose a voice reference, "
-            "set the speed and quality mode, then click 'Generate MP3'. "
+            "set the speed and quality mode, then click Generate MP3. "
             "The audio file will be saved to the output/ folder when done."
         ),
     ),
     (
-        "📋  Why use Queue?",
+        "Why use Queue?",
         (
             "The queue lets you line up multiple generation jobs so they run "
             "automatically one after another. This is useful for long books where "
@@ -31,15 +31,15 @@ _FAQ = [
         ),
     ),
     (
-        "⏸  Paragraph pauses",
+        "Paragraph pauses",
         (
-            "The 'Paragraph pause' slider in the Generate tab controls how long a "
+            "The Paragraph pause slider in the Generate tab controls how long a "
             "silence is inserted between paragraphs. A value of 0.5s is comfortable "
             "for most listening. Increase it for audiobook-style pacing."
         ),
     ),
     (
-        "📁  Generated files",
+        "Generated files",
         (
             "All output MP3 files are saved in output/ at the project root. "
             "Each MP3 has a matching .json sidecar file that stores the source "
@@ -48,7 +48,7 @@ _FAQ = [
         ),
     ),
     (
-        "🎤  Voice reference",
+        "Voice reference",
         (
             "F5-TTS clones speech from a short reference clip. For best results "
             "use a clean 10–15 second recording with no background noise. "
@@ -56,7 +56,7 @@ _FAQ = [
         ),
     ),
     (
-        "📖  Reading / Focus mode",
+        "Reading and Focus mode",
         (
             "The Read tab syncs the text display to the audio position. "
             "Switch to Focus Mode to see only the current sentence in large text, "
@@ -64,7 +64,7 @@ _FAQ = [
         ),
     ),
     (
-        "⚙️  Quality modes",
+        "Quality modes",
         (
             "Best (NFE=32, 500 chars/chunk): highest quality, slowest.\n"
             "Balanced (NFE=32, 750 chars/chunk): default, good trade-off.\n"
@@ -73,7 +73,7 @@ _FAQ = [
         ),
     ),
     (
-        "🐢  Why is it slow?",
+        "Why is it slow?",
         (
             "F5-TTS runs on your local machine. On Apple Silicon (MPS) a typical "
             "chapter takes 5–15 minutes. On CPU it can be several times longer. "

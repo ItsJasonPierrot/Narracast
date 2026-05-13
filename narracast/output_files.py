@@ -33,12 +33,12 @@ def load_file(filepath):
 
             return extract_text(str(path))
         except ImportError:
-            return "⚠️  PDF support not installed. Run: pip install pdfminer.six"
+            return "PDF support not installed. Run: pip install pdfminer.six"
         except Exception as e:
-            return f"⚠️  Could not read PDF: {e}"
+            return f"Could not read PDF: {e}"
     elif path.suffix.lower() == ".txt":
         return path.read_text(encoding="utf-8", errors="replace")
-    return "⚠️  Only .txt and .pdf files are supported."
+    return "Only .txt and .pdf files are supported."
 
 
 def list_history_files():
@@ -63,9 +63,9 @@ def get_history_choices():
 
 def clear_history(confirmed):
     if not confirmed:
-        return "⚠️  Tick the checkbox first to confirm deletion."
+        return "Tick the checkbox first to confirm deletion."
     count = delete_all_history()
-    return f"✅  Deleted {count} file(s)."
+    return f"Deleted {count} file(s)."
 
 
 def delete_all_history() -> int:

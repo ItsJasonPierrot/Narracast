@@ -357,7 +357,7 @@ def generate_core(
     return (
         str(output_path),
         (
-            f"✅  Done! {total} parts → {mins}m {secs}s\n"
+            f"Done! {total} parts → {mins}m {secs}s\n"
             f"Saved as: {filename}\n"
             f"Metadata: {Path(metadata_path).name}"
         ),

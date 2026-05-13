@@ -615,7 +615,7 @@ class ProjectsPage(QWidget):
         if not path:
             return
         text = load_file(path)
-        if text.startswith("⚠️"):
+        if text.startswith(("PDF support", "Could not read PDF", "Only .txt")):
             self.status_label.setText(text)
             return
         fallback_title = Path(path).stem or self._current_project["title"]

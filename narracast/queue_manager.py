@@ -180,10 +180,10 @@ def add_to_queue(
     chapter_id: str = "",
 ):
     if not text.strip():
-        return "⚠️  Please paste some text first."
+        return "Please paste some text first."
     voice_map = get_voice_files()
     if not voice_name or voice_name not in voice_map:
-        return "⚠️  Please select a reference voice."
+        return "Please select a reference voice."
     job = Job(
         text=text,
         title=title,
@@ -212,7 +212,7 @@ def add_to_queue(
 
         mark_chapter_queued(project_id, chapter_id)
     label = f'"{title}"' if title else f'"{text[:40]}…"'
-    msg = f"📋  Queued: {label}"
+    msg = f"Queued: {label}"
     if jobs_ahead:
         msg += f"\n{jobs_ahead} job(s) ahead of it."
     else:

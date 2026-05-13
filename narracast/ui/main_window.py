@@ -158,7 +158,7 @@ class MainWindow(QMainWindow):
 
     def on_model_error(self, err: str) -> None:
         """Called by app.py when model loading fails."""
-        self._status_label.setText(f"⚠  Model failed: {err}")
+        self._status_label.setText(f"Model error: {err}")
 
     def _on_model_ready_signal(self, device: str) -> None:
         """Handles the model_ready signal (redundant path for signal bus use)."""

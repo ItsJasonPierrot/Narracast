@@ -640,12 +640,12 @@ class GeneratePage(QWidget):
     def _start_generate(self) -> None:
         text = self.text_edit.toPlainText().strip()
         if not text:
-            self.job_desc_label.setText("⚠️  Please enter some text first.")
+            self.job_desc_label.setText("Please enter some text first.")
             return
         voices = get_voice_files()
         voice = self.voice_combo.currentText()
         if not voice or voice not in voices:
-            self.job_desc_label.setText("⚠️  Please select a reference voice.")
+            self.job_desc_label.setText("Please select a reference voice.")
             return
 
         speed = self.speed_slider.value() / 1000.0
@@ -732,7 +732,7 @@ class GeneratePage(QWidget):
     def _queue_it(self) -> None:
         text = self.text_edit.toPlainText().strip()
         if not text:
-            self.job_desc_label.setText("⚠️  Please enter some text first.")
+            self.job_desc_label.setText("Please enter some text first.")
             return
         voice = self.voice_combo.currentText()
         speed = self.speed_slider.value() / 1000.0
@@ -776,7 +776,7 @@ class GeneratePage(QWidget):
         voice = self.voice_combo.currentText()
         voice_path = voices.get(voice)
         if not voice_path:
-            self.job_desc_label.setText("⚠️  Please select a reference voice first.")
+            self.job_desc_label.setText("Please select a reference voice first.")
             return
         self._benchmark_dialog = BenchmarkDialog(voice, voice_path, self)
         self._benchmark_dialog.show()
@@ -817,7 +817,7 @@ class GeneratePage(QWidget):
 
     def _on_error(self, err: str) -> None:
         self.job_title_label.setText("Generation failed")
-        self.job_desc_label.setText(f"⚠️  {err}")
+        self.job_desc_label.setText(f"{err}")
         self.progress_bar.setValue(0)
         self._set_generation_buttons_enabled(True)
 

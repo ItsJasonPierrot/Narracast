@@ -41,6 +41,7 @@ from narracast.projects import (
     rebuild_sessions,
     refresh_project_outputs,
     session_progress,
+    session_readable_chapters,
     split_session_after_chapter,
     update_chapter,
     update_project,
@@ -56,6 +57,7 @@ class ProjectsPage(QWidget):
     """Project / Book Mode management page."""
 
     open_in_reader: Signal = Signal(str)
+    open_session_in_reader: Signal = Signal(object)  # list[str] of ordered chapter paths
 
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
@@ -258,6 +260,11 @@ class ProjectsPage(QWidget):
         self.resume_session_btn = QPushButton("Resume next")
         self.resume_session_btn.setObjectName("primary")
         self.resume_session_btn.clicked.connect(self._resume_next_session)
+        self.read_session_btn = QPushButton("Read Session")
+        self.read_session_btn.setIcon(icons.accent(icons.BOOK_OPEN))
+        self.read_session_btn.setObjectName("primary")
+        self.read_session_btn.setEnabled(False)
+        self.read_session_btn.clicked.connect(self._read_selected_session)
         for btn in [
             self.build_sessions_btn,
             self.rename_session_btn,
@@ -265,6 +272,7 @@ class ProjectsPage(QWidget):
             self.merge_session_btn,
             self.complete_session_btn,
             self.resume_session_btn,
+            self.read_session_btn,
         ]:
             session_btns.addWidget(btn)
         session_btns.addStretch()
@@ -400,7 +408,8 @@ class ProjectsPage(QWidget):
             btn.setEnabled(has_output)
 
     def _update_session_action_buttons(self) -> None:
-        has_session = self._selected_session() is not None
+        session = self._selected_session()
+        has_session = session is not None
         for btn in [
             self.rename_session_btn,
             self.split_session_btn,
@@ -408,6 +417,12 @@ class ProjectsPage(QWidget):
             self.complete_session_btn,
         ]:
             btn.setEnabled(has_session)
+        has_readable = (
+            has_session
+            and self._current_project is not None
+            and bool(session_readable_chapters(self._current_project, session))
+        )
+        self.read_session_btn.setEnabled(has_readable)
 
     def _update_summary(self) -> None:
         if not self._current_project:
@@ -734,6 +749,23 @@ class ProjectsPage(QWidget):
             return
         self._select_chapter(session["chapter_ids"][0])
         self.status_label.setText(f"Selected {session['title']}.")
+
+    def _read_selected_session(self) -> None:
+        if not self._current_project:
+            return
+        session = self._selected_session()
+        if not session:
+            return
+        paths = session_readable_chapters(self._current_project, session)
+        if not paths:
+            self.status_label.setText(
+                f"No readable chapters in {session['title']} yet. Generate some chapters first."
+            )
+            return
+        self.status_label.setText(
+            f"Opening {session['title']} — {len(paths)} chapter{'s' if len(paths) != 1 else ''}."
+        )
+        self.open_session_in_reader.emit(paths)
 
     # ── Helpers ───────────────────────────────────────────────────────────
 

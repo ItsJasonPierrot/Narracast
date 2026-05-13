@@ -104,6 +104,7 @@ class ReadingPage(QWidget):
         self._study_mode = False
         self._last_highlight_key: str | None = None
         self._pacing_paused_keys: set[str] = set()
+        self._session_queue: list[str] = []
         self._build_ui()
         self._connect_signals()
 
@@ -172,6 +173,17 @@ class ReadingPage(QWidget):
             btn.clicked.connect(lambda checked=False, s=size: self._set_font_size(s))
             top_layout.addWidget(btn)
             self._size_btns[size] = btn
+
+        top_layout.addSpacing(12)
+
+        # Session: next-chapter button (hidden until a session queue is active)
+        self._next_btn = QPushButton("Next chapter")
+        self._next_btn.setIcon(icons.icon(icons.CHEVRON_RIGHT))
+        self._next_btn.setObjectName("primary")
+        self._next_btn.setFixedHeight(32)
+        self._next_btn.setVisible(False)
+        self._next_btn.clicked.connect(self._advance_session)
+        top_layout.addWidget(self._next_btn)
         root.addWidget(top_bar)
 
         # ── Bookmark bar ─────────────────────────────────────────────────
@@ -351,7 +363,21 @@ class ReadingPage(QWidget):
     # ── Public API ───────────────────────────────────────────────────────────
 
     def load_file(self, path: str) -> None:
-        """Load an audio file and its metadata into the reader."""
+        """Load a single audio file, resetting any active session queue."""
+        self._session_queue = []
+        self._next_btn.setVisible(False)
+        self._do_load(path)
+
+    def load_session(self, paths: list[str]) -> None:
+        """Load the first chapter and queue the rest for sequential playback."""
+        if not paths:
+            return
+        self._session_queue = list(paths[1:])
+        self._do_load(paths[0])
+        self._next_btn.setVisible(bool(self._session_queue))
+
+    def _do_load(self, path: str) -> None:
+        """Internal loader — does not touch the session queue or next button."""
         audio_path = Path(path)
         if not audio_path.exists():
             return
@@ -405,6 +431,14 @@ class ReadingPage(QWidget):
             self._session._offset_ms = last_pos
 
         self._set_controls_enabled(True)
+
+    def _advance_session(self) -> None:
+        """Load the next chapter from the session queue."""
+        if not self._session_queue:
+            return
+        next_path = self._session_queue.pop(0)
+        self._do_load(next_path)
+        self._next_btn.setVisible(bool(self._session_queue))
 
     def shutdown(self) -> None:
         """Stop playback and persist the current reader position."""

@@ -532,6 +532,23 @@ def project_summary(project: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def session_readable_chapters(
+    project: dict[str, Any],
+    session: dict[str, Any],
+) -> list[str]:
+    """Return output paths for chapters in *session* that exist on disk, in session order."""
+    chapter_map = {c["id"]: c for c in project.get("chapters", [])}
+    paths: list[str] = []
+    for chapter_id in session.get("chapter_ids", []):
+        chapter = chapter_map.get(chapter_id)
+        if not chapter:
+            continue
+        output_path = chapter.get("output_path", "")
+        if output_path and Path(output_path).exists():
+            paths.append(output_path)
+    return paths
+
+
 def mark_chapter_queued(project_id: str, chapter_id: str, root: Path = PROJECTS_DIR) -> None:
     update_chapter(project_id, chapter_id, status="queued", root=root)
 

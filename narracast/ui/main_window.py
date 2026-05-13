@@ -110,9 +110,10 @@ class MainWindow(QMainWindow):
         sigs.model_ready.connect(self._on_model_ready_signal)
         sigs.status_update.connect(self._status_label.setText)
 
-        # History → Reading bridge
+        # History / Projects → Reading bridge
         self.history_page.open_in_reader.connect(self._open_in_reader)
         self.projects_page.open_in_reader.connect(self._open_in_reader)
+        self.projects_page.open_session_in_reader.connect(self._open_session_in_reader)
 
     # ── Page navigation ───────────────────────────────────────────────────
 
@@ -133,6 +134,14 @@ class MainWindow(QMainWindow):
 
     def _open_in_reader(self, path: str) -> None:
         self.reading_page.load_file(path)
+        self._switch_page("read")
+
+    def _open_session_in_reader(self, paths: object) -> None:
+        """Open a session's chapters as a queue in the reading page."""
+        path_list = list(paths) if paths else []
+        if not path_list:
+            return
+        self.reading_page.load_session(path_list)
         self._switch_page("read")
 
     # ── Model lifecycle ───────────────────────────────────────────────────

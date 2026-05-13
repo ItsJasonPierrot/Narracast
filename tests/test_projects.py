@@ -290,5 +290,79 @@ class ProjectSummaryTests(unittest.TestCase):
             self.assertIn("queue", summary["next_action"].lower())
 
 
+class SessionReadableChaptersTests(unittest.TestCase):
+    def test_returns_existing_paths_in_session_order(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            p1 = Path(tmp) / "ch1.mp3"
+            p2 = Path(tmp) / "ch2.mp3"
+            p1.write_bytes(b"fake")
+            p2.write_bytes(b"fake")
+            project = {
+                "chapters": [
+                    {"id": "ch1", "status": "generated", "output_path": str(p1)},
+                    {"id": "ch2", "status": "generated", "output_path": str(p2)},
+                    {"id": "ch3", "status": "draft", "output_path": ""},
+                ],
+                "sessions": [],
+            }
+            session = {"id": "s1", "chapter_ids": ["ch1", "ch2", "ch3"]}
+            result = projects.session_readable_chapters(project, session)
+            self.assertEqual(result, [str(p1), str(p2)])
+
+    def test_skips_chapters_with_missing_output_files(self):
+        project = {
+            "chapters": [
+                {
+                    "id": "ch1",
+                    "status": "generated",
+                    "output_path": "/nonexistent/path.mp3",
+                }
+            ],
+            "sessions": [],
+        }
+        session = {"id": "s1", "chapter_ids": ["ch1"]}
+        result = projects.session_readable_chapters(project, session)
+        self.assertEqual(result, [])
+
+    def test_respects_session_chapter_order(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            p1 = Path(tmp) / "first.mp3"
+            p2 = Path(tmp) / "second.mp3"
+            p1.write_bytes(b"fake")
+            p2.write_bytes(b"fake")
+            project = {
+                "chapters": [
+                    {"id": "ch2", "status": "generated", "output_path": str(p2)},
+                    {"id": "ch1", "status": "generated", "output_path": str(p1)},
+                ],
+                "sessions": [],
+            }
+            # session lists ch1 before ch2
+            session = {"id": "s1", "chapter_ids": ["ch1", "ch2"]}
+            result = projects.session_readable_chapters(project, session)
+            self.assertEqual(result, [str(p1), str(p2)])
+
+    def test_returns_empty_for_empty_session(self):
+        project = {"chapters": [], "sessions": []}
+        session = {"id": "s1", "chapter_ids": []}
+        result = projects.session_readable_chapters(project, session)
+        self.assertEqual(result, [])
+
+    def test_skips_chapters_not_in_project(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            p1 = Path(tmp) / "ch1.mp3"
+            p1.write_bytes(b"fake")
+            project = {
+                "chapters": [
+                    {"id": "ch1", "status": "generated", "output_path": str(p1)}
+                ],
+                "sessions": [],
+            }
+            # session references a chapter that doesn't exist in the project
+            session = {"id": "s1", "chapter_ids": ["ch1", "ghost_id"]}
+            result = projects.session_readable_chapters(project, session)
+            self.assertEqual(result, [str(p1)])
+
+
 if __name__ == "__main__":
     unittest.main()

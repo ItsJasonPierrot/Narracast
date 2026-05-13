@@ -187,7 +187,7 @@ class VoicePage(QWidget):
         name_col.setSpacing(4)
         name_col.addWidget(QLabel("Voice name"))
         self.profile_name_edit = QLineEdit()
-        self.profile_name_edit.setPlaceholderText("e.g. Suchet warm narration")
+        self.profile_name_edit.setPlaceholderText("e.g. Narrator warm tone")
         name_col.addWidget(self.profile_name_edit)
         profile_row.addLayout(name_col, stretch=1)
 

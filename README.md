@@ -6,6 +6,24 @@ A fully offline native macOS desktop app built with Python and PySide6, powered 
 
 ---
 
+## Development approach
+
+Narracast is an experiment in **multi-AI-agent software development** — building a real, shippable app by orchestrating several specialised AI agents in parallel, each owning a distinct role.
+
+| Role | Agent | Responsibility |
+|---|---|---|
+| Project lead & orchestrator | **Jason Pierrot** (human) | Overall direction, decision-making, bash scripting, initial voice pipeline setup |
+| Tech Lead / Reviewer | Codex agent | Roadmap ownership, architecture decisions, code review |
+| Dev agent | Codex | Backend implementation and feature development |
+| Dev agent | Claude Code (Anthropic) | Backend implementation and feature development |
+| Senior UX Designer | OpenAI agent | Wireframing, UX/UI decisions, visual direction |
+
+Jason set up the project, wrote the initial bash scripts for voice extraction and Demucs processing, and managed every agent — deciding what to build next, reviewing outputs, and keeping the agents aligned on a single coherent product.
+
+The v1.0.0 release was built entirely through this workflow. No single agent owned the whole codebase; the human orchestrator was the only constant thread.
+
+---
+
 ## Branding
 
 Narracast uses a green app icon with a stylized **N** mark. The icon appears in:

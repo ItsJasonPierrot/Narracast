@@ -124,17 +124,20 @@ class ReadingPage(QWidget):
 
         self._control_buttons: list[QPushButton] = []
         controls = [
-            ("Play",   "_play",    icons.accent, icons.PLAY),
-            ("Stop",   "_stop",    icons.icon,   icons.STOP),
-            ("-10s",   "_back",    icons.icon,   icons.REWIND_10),
-            ("+10s",   "_forward", icons.icon,   icons.FAST_FORWARD_10),
-            ("Repeat", "_repeat",  icons.icon,   icons.REPEAT),
+            ("Play / Resume", "_play",    icons.accent, icons.PLAY),
+            ("Stop",          "_stop",    icons.icon,   icons.STOP),
+            ("-10s",          "_back",    icons.icon,   icons.REWIND_10),
+            ("+10s",          "_forward", icons.icon,   icons.FAST_FORWARD_10),
+            ("Repeat",        "_repeat",  icons.icon,   icons.REPEAT),
         ]
         for label, fn_name, icon_fn, icon_name in controls:
             btn = QPushButton(label)
             btn.setIcon(icon_fn(icon_name))
             btn.setFixedHeight(32)
-            btn.setFixedWidth(90)
+            if fn_name == "_play":
+                btn.setFixedWidth(120)
+            else:
+                btn.setFixedWidth(80)
             btn.clicked.connect(getattr(self, fn_name))
             top_layout.addWidget(btn)
             self._control_buttons.append(btn)
@@ -430,7 +433,7 @@ class ReadingPage(QWidget):
             pos = self._session.pause_and_get_position()
             if self._meta_path:
                 save_last_position(str(self._meta_path), pos)
-        self._play_btn.setText("Play")
+        self._play_btn.setText("Play / Resume")
         self._play_btn.setIcon(icons.accent(icons.PLAY))
 
     def _back(self) -> None:
@@ -446,7 +449,7 @@ class ReadingPage(QWidget):
             self._session.repeat_chunk(self._highlight_units or self._timeline)
 
     def _on_playback_done(self) -> None:
-        self._play_btn.setText("Play")
+        self._play_btn.setText("Play / Resume")
         self._play_btn.setIcon(icons.accent(icons.PLAY))
 
     # ── Position update ───────────────────────────────────────────────────────
@@ -616,7 +619,7 @@ class ReadingPage(QWidget):
         pos = self._session.pause_and_get_position()
         if self._meta_path:
             save_last_position(str(self._meta_path), pos)
-        self._play_btn.setText("Play")
+        self._play_btn.setText("Play / Resume")
         self._play_btn.setIcon(icons.accent(icons.PLAY))
         self._time_label.setText(f"{_ms_to_time(pos)} / {_ms_to_time(self._duration_ms)}  •  {message}")
 

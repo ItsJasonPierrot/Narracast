@@ -12,9 +12,7 @@ Narracast uses a green app icon with a stylized **N** mark. The icon appears in:
 
 - the macOS app launcher: `/Applications/Narracast.app`
 - the startup loading screen
-- the top navigation/header bar inside the app
-
-Narracast keeps separate icon assets for each use:
+- the top navigation bar inside the app
 
 ```text
 assets/Narracast_Icon.png        # in-app header icon
@@ -34,7 +32,7 @@ If the Dock or Finder shows an old icon, remove Narracast from the Dock and add 
 
 ## What it does
 
-Paste any text — a book chapter, article, scripture, notes — and the app generates a spoken MP3 using a cloned voice (David Suchet reading the NIV Bible). Everything runs locally on your Mac. No internet connection needed after setup, no API keys, no subscriptions.
+Paste any text — a book chapter, article, scripture, notes — and the app generates a spoken MP3 using a cloned voice. Everything runs locally on your Mac. No internet connection needed after setup, no API keys, no subscriptions.
 
 ---
 
@@ -93,6 +91,7 @@ venv/bin/python3 app.py
 ## Sections
 
 ### Generate Speech
+
 The main production page. Paste your text, set a book title and part number for the filename, choose a voice and speed, then generate.
 
 | Button | What it does |
@@ -109,15 +108,15 @@ Raw copied text often contains artefacts from PDFs and e-books. The **Clean:** t
 
 | Button | What it fixes |
 |---|---|
-| **⎵ Spaces** | Collapses extra spaces, tabs, and excessive blank lines |
-| **⟐ Hyphens** | Rejoins words split by a line-break hyphen (e.g. "some-\nthing" → "something") |
-| **# Page nos** | Removes standalone page-number lines ("42", "Page 12", "— 12 —") |
-| **🔗 URLs** | Strips http/www URLs |
-| **✨ All** | Applies all four steps at once |
-| **📄 PDF clean** | Conservatively removes repeated PDF headers/footers and joins wrapped lines |
+| **Spaces** | Collapses extra spaces, tabs, and excessive blank lines |
+| **Hyphens** | Rejoins words split by a line-break hyphen (e.g. "some-\nthing" → "something") |
+| **Page nos** | Removes standalone page-number lines ("42", "Page 12", "— 12 —") |
+| **URLs** | Strips http/www URLs |
+| **All** | Applies all four steps at once |
+| **PDF clean** | Conservatively removes repeated PDF headers/footers and joins wrapped lines |
 | **Raw / Cleaned** | Toggles between the last raw text and cleaned preview |
 
-Each button is non-destructive to the undo history — press Ctrl-Z / Cmd-Z to undo if the result isn't right.
+Each button is non-destructive to the undo history — press Cmd-Z to undo if the result isn't right.
 
 PDF cleanup only removes repeated headers/footers when page breaks are present and the same short line appears across several pages. It is deliberately cautious so book content is not deleted by accident.
 
@@ -130,7 +129,6 @@ Use **Sentence pause** when you want extra generated silence between sentences. 
 For full chapters or long essays, use **Queue it**. It runs in the background and keeps the app responsive.
 
 ### Generation modes
-Generation mode controls the speed/quality tradeoff.
 
 | Mode | Chunk size | F5 steps | Best for |
 |---|---:|---:|---|
@@ -141,21 +139,21 @@ Generation mode controls the speed/quality tradeoff.
 
 Larger chunks reduce the number of F5-TTS calls. Lower F5 steps reduce model work. Both can speed up generation, with some possible quality tradeoff.
 
-Use **Run benchmark** in the Generate page's System card to test all presets on your Mac. The benchmark reports chunk count, generation time, generated audio duration, and real-time factor so you can choose the best speed/quality mode without guessing.
+Use **Run benchmark** in the Generate page's System card to test all presets on your Mac. The benchmark reports chunk count, generation time, generated audio duration, and real-time factor.
 
-Use **Analyze timings** after a few real exports to inspect recent sidecar timing data. It shows how much time was spent in inference, waveform conversion, assembly, MP3 export, ID3 tagging, and metadata writing, then recommends whether async finalization is worth prototyping.
+Use **Analyze timings** after a few real exports to inspect recent sidecar timing data and see where time is being spent across inference, assembly, and export stages.
 
 Preview generation intentionally uses Draft settings and caches repeated identical previews by text, voice, speed, and preset so repeated checks do not redo the same work.
 
 ### Progress feedback
-Narracast gives feedback at two slow points:
 
 - **Startup** — a short loading screen appears, then the main window opens while the F5-TTS model finishes loading. Generate and Preview unlock when ready.
 - **Generation** — the Generate page shows a progress bar, current chunk, elapsed time, and estimated time remaining.
 - **Queue jobs** — the Queue page updates every 2 seconds with each job's status and progress.
 
 ### MP3 tags
-Every generated file is tagged automatically with ID3 metadata so it appears correctly in music apps, podcast players, and on your phone:
+
+Every generated file is tagged automatically with ID3 metadata:
 
 - **Title** — book title and part (e.g. "The Conquest of Bread — Part 1")
 - **Album** — book title
@@ -163,59 +161,54 @@ Every generated file is tagged automatically with ID3 metadata so it appears cor
 - **Artist** — the voice name used for cloning
 
 ### Metadata sidecars
+
 Every generated MP3 also gets a matching `.json` file beside it. The sidecar stores the original text, title, part, voice, speed, generation preset, paragraph pause, generation chunk timeline, sentence-level highlight units, text offsets, audio timings, generation-stage timings, last playback position, and bookmarks.
-
-Generation chunks stay large for F5-TTS quality and speed. Reading highlights use smaller sentence-level units estimated proportionally inside each generated chunk, so the reader can track text more precisely without slowing generation down.
-
-Generation timings include model inference, waveform conversion, assembly, audio polish, MP3 export, ID3 tags, metadata write, finalize time, reference cache hits/misses, and total time. Normal generation converts F5-TTS waveform output directly into audio segments, so per-chunk temporary WAV writing is avoided for final MP3 exports.
 
 ```text
 Conquest-of-Bread_Part-1_2026-05-08_14-32-01.mp3
 Conquest-of-Bread_Part-1_2026-05-08_14-32-01.json
 ```
 
-### 📖 Read (reading companion)
+### Read (reading companion)
 
-Select any generated file in History and click **📖 Read + Play** to open it in the reading view. Narracast will start playing the audio and highlight each sentence as it's spoken. Older files without sentence highlight metadata fall back to chunk-level highlighting.
+Select any generated file in History and click **Read + Play** to open it in the reading view. Narracast will start playing the audio and highlight each sentence as it is spoken. Older files without sentence highlight metadata fall back to chunk-level highlighting.
 
 #### Playback controls
 
 | Button | What it does |
 |---|---|
-| **▶ Play / Resume** | Start playback, or resume from where you stopped |
-| **■ Stop** | Stop and save your position — the app remembers where you left off |
-| **◀ –10s** | Jump back 10 seconds |
-| **▶ +10s** | Jump forward 10 seconds |
-| **↺ Repeat** | Restart the current chunk from the beginning |
+| **Play / Resume** | Start playback, or resume from where you stopped |
+| **Stop** | Stop and save your position — the app remembers where you left off |
+| **-10s** | Jump back 10 seconds |
+| **+10s** | Jump forward 10 seconds |
+| **Repeat** | Restart the current chunk from the beginning |
 
-The last playback position is automatically saved when you stop or close the app, so **Resume** picks up exactly where you left off.
+The last playback position is automatically saved when you stop or close the app.
 
 #### Bookmarks
 
-Save any position with a name while the audio is playing:
+Save any position while the audio is playing:
 
-1. Click **🔖 Add here** and type a short label (e.g. "Chapter 2 start").
+1. Click **Add here** — a bookmark is saved at the current position.
 2. The bookmark appears in the dropdown next to the button.
-3. Select a bookmark and click **⤶ Jump** to seek to it instantly.
-4. Click **✕ Delete** to remove a selected bookmark.
+3. Select a bookmark and click **Jump** to seek to it instantly.
+4. Click **Delete** to remove a selected bookmark.
 
 Bookmarks are saved in the sidecar `.json` file and persist between sessions.
 
 #### Focus Mode
 
-Click **🔍 Focus Mode** to switch from the full-text scrolling view to a focused three-chunk layout:
+Click **Focus Mode** to switch from the full-text scrolling view to a focused three-chunk layout:
 
 - The **previous chunk** appears above in muted grey.
 - The **current chunk** is shown large, front-and-centre, with a green highlight.
 - The **next chunk** appears below in muted grey.
 
-Use the **S / M / L / XL** size buttons to adjust the text size of the current chunk to whatever feels comfortable. Click **📄 Full Text** to switch back to the scrolling view at any time.
+Use the **S / M / L / XL** size buttons to adjust the text size to whatever feels comfortable.
 
-The reader also includes display controls for theme, font, and spacing. These settings apply to both full-text reading and Focus Mode, and spacing changes the full-text reader's line height and paragraph breathing room.
+The reader also includes display controls for theme, font, and spacing. These apply to both full-text reading and Focus Mode, and persist in `settings.json`.
 
 #### Cognitive pacing
-
-The Read page has playback-only pacing controls:
 
 - **Pause after paragraph** pauses when playback reaches a paragraph gap, so you can breathe before continuing.
 - **Study mode** pauses when the reader advances to the next sentence; press Play to continue sentence by sentence.
@@ -223,61 +216,69 @@ The Read page has playback-only pacing controls:
 These playback controls do not modify the MP3. Sentence pause on the Generate page is the generated-audio pacing option.
 
 ### Queue
-Shows all queued and in-progress jobs. Refreshes every 2 seconds automatically.
-Jobs run one at a time in the background — add as many as you like and come back when they're done.
+
+Shows all queued and in-progress jobs. Refreshes every 2 seconds automatically. Jobs run one at a time in the background — add as many as you like and come back when they're done.
 
 ### Voice Reference
-Swap the voice the app clones. Pick a cleaned audio track from your `clean_voice` folder, set a start time and duration, paste the exact transcript spoken in the clip, then preview it.
+
+Swap the voice the app clones. Pick a source audio file, set a start time and duration, paste the exact transcript spoken in the clip, then preview it.
+
+You can **Browse…** to import any WAV, MP3, FLAC, M4A, OGG, or AIFF file directly — you do not need to go through the Demucs pipeline first.
 
 You can save the clip two ways:
 
-- **Save as reference.wav** updates the active backward-compatible reference voice.
-- **Save named voice** stores a reusable voice profile under `voices/` with its own `reference.wav`, `reference.txt`, and `metadata.json`.
+- **Save as reference.wav** — updates the active reference voice immediately.
+- **Save named voice** — stores a reusable voice profile under `voices/` with its own `reference.wav`, `reference.txt`, and `metadata.json`.
 
 Saved voices appear in the Generate voice selector immediately. Each saved transcript is passed into F5-TTS as `ref_text`, so generation can avoid unnecessary reference-text guessing.
-
-Narracast caches reference metadata and transcripts by audio/transcript file state, so repeated chunks using the same saved voice do not keep rereading the same reference text from disk. If the reference audio or transcript changes, the cache invalidates automatically.
 
 The saved voice library also lets you:
 
 - rename a saved voice and update its notes
 - delete a saved voice profile
+- set a saved voice as the active reference
 - generate a short sample preview from saved profile audio and transcript
 
 ### History
-Lists all generated MP3s, newest first, with file sizes. Select any file to **▶ Play (audio only)** for simple playback, or click **📖 Read + Play** to open it in the full reading view with highlighting, bookmarks, and focus mode. Use the Clear History button (with confirmation) to delete everything in the output folder.
+
+Lists all generated MP3s, newest first, with file sizes. Select any file to **Play (audio only)** for simple playback, or click **Read + Play** to open it in the full reading view with highlighting, bookmarks, and focus mode.
+
+### Projects
+
+Organise long texts into projects. Each project holds a list of chapters, each with its own text, voice, and status (draft, queued, generated, or error). Queue one chapter or all drafts at once. Projects also support:
+
+- **Automatic chapter splitting** — paste a long text and let the app detect headings and split into draft chapters for review before queueing.
+- **Reading sessions** — break chapters into manageable estimated-duration sessions with progress tracking.
 
 ### Help
+
 Quick reference guide built into the app.
 
 ---
 
 ## What's Next
 
-Narracast is under active development. Planned features, roughly in order of priority:
-
-### Near-term
-- **Queue audio polish parity** — advanced audio settings (bitrate, normalization, fade, silence trim) carried through queued and retried jobs, not just immediate generation
-- **Voice Library polish** — edit saved voice transcripts in place, set a saved voice as the active reference, and persistent sample previews per profile
+The core reading-companion feature set is complete. Active development is focused on:
 
 ### Medium-term
-- **Automatic chapter splitting** — detect chapter headings, section markers, or Markdown headings in pasted or imported text and split them into separate generation jobs automatically, with a review step before queueing
-- **Reading sessions** — break long material into manageable listening sessions with estimated durations and progress tracking, reducing executive-function friction for long books
+- **Session-level reader launch** — open the reader directly from a reading session in Projects
+- **Manual session reorder** — drag sessions into a different order within a project
+- **Project import flow** — import an existing folder of MP3s as a project
 
 ### Larger features
-- **Project / Book mode** — a library of projects, each with chapters or parts, batch generation, and per-project settings (voice, speed, notes)
-- **Streaming chunk playback** — start listening after the first generated chunk instead of waiting for the full export
 - **M4B audiobook export** — combine chapters into a single `.m4b` file with native chapter markers for audiobook players
+- **Streaming chunk playback** — start listening after the first generated chunk instead of waiting for the full export
 
 ### Deferred / research
 - **Word-level highlighting** — per-word karaoke-style sync using forced speech alignment
+- **Local TTS backend process** — move the model into a persistent worker process for cleaner cancellation and future streaming
 - **Mobile companion** — iPhone/Android app for listening, syncing, and bookmarks
 
 ---
 
 ## File naming
 
-Files are saved to the `output/` folder inside the project directory and named automatically:
+Files are saved to the `output/` folder and named automatically:
 
 ```
 Conquest-of-Bread_Part-1_2026-05-08_14-32-01.mp3
@@ -292,55 +293,56 @@ If you leave the title fields blank, the first five words of the text are used i
 ```
 Narracast/
 ├── assets/
-│   ├── Narracast_Icon.png — in-app header icon
-│   ├── Narracast_Splash_Icon.png — splash screen icon
-│   ├── Narracast_App_Icon.png — app bundle icon source
-│   └── Narracast.icns — generated macOS app icon
-├── app.py              — PySide6 launcher and background model loader
-├── reference.txt       — transcript for the active reference voice clip
-├── voices/             — named voice profiles, each with audio, transcript, and metadata
-├── narracast/          — backend package
-│   ├── paths.py        — project-relative paths
-│   ├── presets.py      — generation speed/quality presets
-│   ├── text_splitter.py — chunking and paragraph break handling
-│   ├── audio_generation.py — F5-TTS inference and MP3 assembly
-│   ├── text_cleanup.py — regex-based text pre-processing helpers
-│   ├── metadata.py     — JSON sidecar files for generated MP3s
-│   ├── queue_manager.py — background queue and job state
-│   ├── voices.py       — voice/reference file helpers
-│   ├── output_files.py — filenames, history, and file loading
-│   ├── settings.py     — local user preferences
-│   ├── playback.py     — audio playback, position tracking, bookmarks
-│   ├── benchmark.py    — local preset speed benchmark helper
+│   ├── Narracast_Icon.png           — in-app header icon
+│   ├── Narracast_Splash_Icon.png    — splash screen icon
+│   ├── Narracast_App_Icon.png       — app bundle icon source
+│   └── Narracast.icns               — generated macOS app icon
+├── app.py                           — PySide6 launcher and background model loader
+├── reference.txt                    — transcript for the active reference voice clip
+├── voices/                          — named voice profiles (audio, transcript, metadata)
+├── projects/                        — project JSON files
+├── narracast/                       — backend package
+│   ├── paths.py                     — project-relative paths
+│   ├── presets.py                   — generation speed/quality presets
+│   ├── text_splitter.py             — chunking and paragraph break handling
+│   ├── audio_generation.py          — F5-TTS inference and MP3 assembly
+│   ├── text_cleanup.py              — regex-based text pre-processing helpers
+│   ├── metadata.py                  — JSON sidecar files for generated MP3s
+│   ├── queue_manager.py             — background queue and job state
+│   ├── voices.py                    — voice/reference file helpers
+│   ├── projects.py                  — project and chapter management
+│   ├── chapter_splitter.py          — automatic chapter detection and splitting
+│   ├── output_files.py              — filenames, history, and file loading
+│   ├── settings.py                  — local user preferences
+│   ├── playback.py                  — audio playback, position tracking, bookmarks
+│   ├── benchmark.py                 — local preset speed benchmark helper
 │   └── ui/
-│       ├── main_window.py — QMainWindow shell, sidebar, stacked pages
-│       ├── benchmark_dialog.py — PySide6 benchmark results dialog
-│       ├── sidebar.py — left navigation and system status
-│       ├── theme.py — PySide6 dark/light app stylesheet
-│       ├── widgets.py — reusable card, label, chip, and status widgets
-│       ├── signals.py — Qt signal bus for background work
+│       ├── main_window.py           — QMainWindow shell, sidebar, stacked pages
+│       ├── benchmark_dialog.py      — PySide6 benchmark results dialog
+│       ├── sidebar.py               — left navigation and system status
+│       ├── theme.py                 — PySide6 dark/light app stylesheet
+│       ├── icons.py                 — centralised qtawesome/mdi6 icon registry
+│       ├── widgets.py               — reusable card, label, chip, and status widgets
+│       ├── signals.py               — Qt signal bus for background work
 │       └── pages/
-│           ├── generate_page.py — Generate Speech production page
-│           ├── queue_page.py — background queue monitor
-│           ├── voice_page.py — Voice Reference extraction page
-│           ├── history_page.py — generated audio library
-│           ├── reading_page.py — Read mode with highlighting/focus
-│           └── help_page.py — Help Center
-├── reference.wav       — the 12-second voice clip used for cloning
-├── README.md           — this file
-├── requirements.txt    — Python package list
-├── tests/              — lightweight backend helper tests
+│           ├── generate_page.py     — Generate Speech production page
+│           ├── queue_page.py        — background queue monitor
+│           ├── voice_page.py        — Voice Reference extraction page
+│           ├── history_page.py      — generated audio library
+│           ├── reading_page.py      — Read mode with highlighting and focus
+│           ├── projects_page.py     — Project / Book mode
+│           └── help_page.py         — Help Center
+├── reference.wav                    — the active voice clip used for cloning
+├── README.md                        — this file
+├── requirements.txt                 — Python package list
+├── tests/                           — lightweight backend helper tests
 ├── scripts/
-│   └── Narracast.app-launcher.sh — source copy of the macOS app bundle launcher
-├── venv/               — Python 3.11 virtual environment
-├── raw_audio/          — original downloaded audio files
-├── clean_voice/        — Demucs-separated narrator vocals (.wav files)
-└── output/             — generated MP3s saved here
+│   └── Narracast.app-launcher.sh    — source copy of the macOS app bundle launcher
+├── venv/                            — Python 3.11 virtual environment
+├── raw_audio/                       — original downloaded audio files
+├── clean_voice/                     — Demucs-separated narrator vocals
+└── output/                          — generated MP3s saved here
 ```
-
-The app finds `clean_voice/`, `voices/`, `reference.wav`, and `output/` relative to `app.py`, so the project folder can be moved without editing hardcoded paths.
-
-Narracast also writes a local `settings.json` file beside the app. It remembers small workflow preferences like voice, speed, generation mode, title, part, paragraph pause, app theme, last page, reader display settings, and window size. It does **not** save the pasted text.
 
 ---
 
@@ -352,8 +354,9 @@ Narracast also writes a local `settings.json` file beside the app. It remembers 
 | F5-TTS | Voice cloning and speech synthesis |
 | PyTorch (MPS) | AI inference backend (Apple Silicon) |
 | PySide6 / Qt | Native desktop UI, sidebar navigation, stacked pages |
+| qtawesome | Material Design icon library (mdi6) for all UI buttons |
 | pydub | Joining and exporting audio chunks |
-| soundfile | Writing intermediate .wav files |
+| soundfile | Writing intermediate WAV files |
 | pdfminer.six | Extracting text from PDF uploads |
 | mutagen | Writing ID3 tags to generated MP3 files |
 | ffmpeg | Extracting voice reference clips |
@@ -373,7 +376,7 @@ Narracast also writes a local `settings.json` file beside the app. It remembers 
 
 ## Transferring MP3s to your phone
 
-- **AirDrop** — open Finder, navigate to the `output/` folder inside the project, right-click a file → Share → AirDrop
+- **AirDrop** — open Finder, navigate to the `output/` folder, right-click a file → Share → AirDrop
 - **USB** — connect your phone and drag files across in Finder
 
 ---

@@ -12,8 +12,21 @@ class TimingAnalysisTests(unittest.TestCase):
             report = analyze_generation_timings(Path(tmp))
 
         self.assertFalse(report.has_data)
+        self.assertEqual(report.sidecar_count, 0)
         self.assertEqual(report.file_count, 0)
         self.assertIn("No generation timing data", report.recommendation)
+
+    def test_sidecars_without_timings_explain_data_gap(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            sidecar = Path(tmp) / "old.json"
+            sidecar.write_text(json.dumps({"schema_version": 1}), encoding="utf-8")
+
+            report = analyze_generation_timings(Path(tmp))
+
+        self.assertFalse(report.has_data)
+        self.assertEqual(report.sidecar_count, 1)
+        self.assertEqual(report.file_count, 0)
+        self.assertIn("none include generation_timings", report.recommendation)
 
     def test_analyzes_sidecar_timings(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -36,6 +49,7 @@ class TimingAnalysisTests(unittest.TestCase):
             report = analyze_generation_timings(Path(tmp))
 
         self.assertTrue(report.has_data)
+        self.assertEqual(report.sidecar_count, 1)
         self.assertEqual(report.file_count, 1)
         self.assertEqual(report.finalize_time_s, 12)
         self.assertAlmostEqual(report.finalize_share, 0.12)

@@ -112,6 +112,7 @@ class MainWindow(QMainWindow):
 
         # History → Reading bridge
         self.history_page.open_in_reader.connect(self._open_in_reader)
+        self.projects_page.open_in_reader.connect(self._open_in_reader)
 
     # ── Page navigation ───────────────────────────────────────────────────
 

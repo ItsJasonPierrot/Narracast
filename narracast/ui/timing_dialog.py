@@ -64,7 +64,12 @@ class TimingAnalysisDialog(QDialog):
         self.table.setRowCount(0)
 
         if not report.has_data:
-            self.summary.setText("No generation timing data found yet.")
+            if report.sidecar_count:
+                self.summary.setText(
+                    f"Checked {report.sidecar_count} sidecar file(s), but none had usable timing data."
+                )
+            else:
+                self.summary.setText("No generation timing data found yet.")
             self.recommendation.setText(report.recommendation)
             return
 

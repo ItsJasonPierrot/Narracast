@@ -2,9 +2,10 @@
 
 from __future__ import annotations
 
+import subprocess
 from pathlib import Path
 
-from PySide6.QtCore import Qt
+from PySide6.QtCore import Qt, Signal
 from PySide6.QtWidgets import (
     QComboBox,
     QFormLayout,
@@ -30,11 +31,15 @@ from narracast.projects import (
     list_projects,
     load_project,
     mark_session_complete,
+    merge_session_with_next,
     next_unfinished_session,
     rebuild_sessions,
+    refresh_project_outputs,
     session_progress,
+    split_session_after_chapter,
     update_chapter,
     update_project,
+    update_session,
 )
 from narracast.queue_manager import add_to_queue
 from narracast.voices import get_voice_files
@@ -43,6 +48,8 @@ from narracast.ui.widgets import Card, MutedLabel, SectionLabel
 
 class ProjectsPage(QWidget):
     """Project / Book Mode management page."""
+
+    open_in_reader: Signal = Signal(str)
 
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
@@ -184,34 +191,67 @@ class ProjectsPage(QWidget):
         self.queue_chapter_btn.clicked.connect(self._queue_selected_chapter)
         self.queue_all_btn = QPushButton("Queue all drafts")
         self.queue_all_btn.clicked.connect(self._queue_all_drafts)
+        self.regenerate_btn = QPushButton("Regenerate")
+        self.regenerate_btn.clicked.connect(self._regenerate_selected_chapter)
         for btn in [
             self.add_chapter_btn,
             self.update_chapter_btn,
             self.delete_chapter_btn,
             self.queue_chapter_btn,
             self.queue_all_btn,
+            self.regenerate_btn,
         ]:
             chapter_btns.addWidget(btn)
         chapter_btns.addStretch()
         chapter_layout.addLayout(chapter_btns)
 
+        output_btns = QHBoxLayout()
+        self.read_output_btn = QPushButton("Read + Play")
+        self.read_output_btn.clicked.connect(self._read_selected_output)
+        self.reveal_output_btn = QPushButton("Reveal output")
+        self.reveal_output_btn.clicked.connect(self._reveal_selected_output)
+        self.refresh_outputs_btn = QPushButton("Refresh output status")
+        self.refresh_outputs_btn.clicked.connect(self._refresh_output_status)
+        for btn in [self.read_output_btn, self.reveal_output_btn, self.refresh_outputs_btn]:
+            output_btns.addWidget(btn)
+        output_btns.addStretch()
+        chapter_layout.addLayout(output_btns)
+
         chapter_layout.addWidget(SectionLabel("Reading sessions"))
+        self.session_title_edit = QLineEdit()
+        self.session_title_edit.setPlaceholderText("Session title")
+        chapter_layout.addWidget(self.session_title_edit)
+
         self.session_tree = QTreeWidget()
         self.session_tree.setColumnCount(3)
         self.session_tree.setHeaderLabels(["Session", "Progress", "Status"])
         self.session_tree.setRootIsDecorated(False)
         self.session_tree.setMaximumHeight(120)
+        self.session_tree.itemSelectionChanged.connect(self._on_session_selection)
         chapter_layout.addWidget(self.session_tree)
 
         session_btns = QHBoxLayout()
         self.build_sessions_btn = QPushButton("Build sessions")
         self.build_sessions_btn.clicked.connect(self._build_sessions)
+        self.rename_session_btn = QPushButton("Rename")
+        self.rename_session_btn.clicked.connect(self._rename_session)
+        self.split_session_btn = QPushButton("Split after chapter")
+        self.split_session_btn.clicked.connect(self._split_selected_session)
+        self.merge_session_btn = QPushButton("Merge next")
+        self.merge_session_btn.clicked.connect(self._merge_selected_session)
         self.complete_session_btn = QPushButton("Mark complete")
         self.complete_session_btn.clicked.connect(self._mark_session_complete)
         self.resume_session_btn = QPushButton("Resume next")
         self.resume_session_btn.setObjectName("primary")
         self.resume_session_btn.clicked.connect(self._resume_next_session)
-        for btn in [self.build_sessions_btn, self.complete_session_btn, self.resume_session_btn]:
+        for btn in [
+            self.build_sessions_btn,
+            self.rename_session_btn,
+            self.split_session_btn,
+            self.merge_session_btn,
+            self.complete_session_btn,
+            self.resume_session_btn,
+        ]:
             session_btns.addWidget(btn)
         session_btns.addStretch()
         chapter_layout.addLayout(session_btns)
@@ -313,6 +353,11 @@ class ProjectsPage(QWidget):
         self.chapter_title_edit.setText(chapter["title"])
         self.chapter_text_edit.setPlainText(chapter["text"])
 
+    def _on_session_selection(self) -> None:
+        session = self._selected_session()
+        if session:
+            self.session_title_edit.setText(session["title"])
+
     # ── Project actions ───────────────────────────────────────────────────
 
     def _new_project(self) -> None:
@@ -388,6 +433,45 @@ class ProjectsPage(QWidget):
         if chapter:
             self._queue_chapter(chapter)
 
+    def _regenerate_selected_chapter(self) -> None:
+        if not self._current_project:
+            return
+        chapter = self._selected_chapter()
+        if not chapter:
+            return
+        update_chapter(
+            self._current_project["id"],
+            chapter["id"],
+            status="draft",
+            output_path="",
+        )
+        self._load_project(self._current_project["id"])
+        refreshed = self._selected_chapter() or chapter
+        self._queue_chapter(refreshed)
+
+    def _read_selected_output(self) -> None:
+        chapter = self._selected_chapter()
+        output_path = chapter.get("output_path", "") if chapter else ""
+        if output_path and Path(output_path).exists():
+            self.open_in_reader.emit(output_path)
+        else:
+            self.status_label.setText("No generated output found for this chapter.")
+
+    def _reveal_selected_output(self) -> None:
+        chapter = self._selected_chapter()
+        output_path = chapter.get("output_path", "") if chapter else ""
+        if output_path and Path(output_path).exists():
+            subprocess.Popen(["open", "-R", output_path])
+        else:
+            self.status_label.setText("No generated output found for this chapter.")
+
+    def _refresh_output_status(self) -> None:
+        if not self._current_project:
+            return
+        refresh_project_outputs(self._current_project["id"])
+        self.status_label.setText("Output status refreshed.")
+        self._load_project(self._current_project["id"])
+
     def _split_pasted_text(self) -> None:
         if not self._current_project:
             return
@@ -448,12 +532,55 @@ class ProjectsPage(QWidget):
     def _mark_session_complete(self) -> None:
         if not self._current_project:
             return
-        items = self.session_tree.selectedItems()
-        if not items:
+        session = self._selected_session()
+        if not session:
             return
-        session_id = items[0].data(0, Qt.ItemDataRole.UserRole)
-        mark_session_complete(self._current_project["id"], session_id)
+        mark_session_complete(self._current_project["id"], session["id"])
         self.status_label.setText("Session marked complete.")
+        self._load_project(self._current_project["id"])
+
+    def _rename_session(self) -> None:
+        if not self._current_project:
+            return
+        session = self._selected_session()
+        if not session:
+            return
+        update_session(
+            self._current_project["id"],
+            session["id"],
+            title=self.session_title_edit.text(),
+        )
+        self.status_label.setText("Session renamed.")
+        self._load_project(self._current_project["id"])
+
+    def _split_selected_session(self) -> None:
+        if not self._current_project:
+            return
+        session = self._selected_session()
+        chapter = self._selected_chapter()
+        if not session or not chapter:
+            self.status_label.setText("Select a session and a chapter to split after.")
+            return
+        result = split_session_after_chapter(
+            self._current_project["id"],
+            session["id"],
+            chapter["id"],
+        )
+        self.status_label.setText(
+            "Session split." if result else "Cannot split at the selected chapter."
+        )
+        self._load_project(self._current_project["id"])
+
+    def _merge_selected_session(self) -> None:
+        if not self._current_project:
+            return
+        session = self._selected_session()
+        if not session:
+            return
+        result = merge_session_with_next(self._current_project["id"], session["id"])
+        self.status_label.setText(
+            "Sessions merged." if result else "No following session to merge."
+        )
         self._load_project(self._current_project["id"])
 
     def _resume_next_session(self) -> None:
@@ -476,6 +603,18 @@ class ProjectsPage(QWidget):
             return None
         chapter_id = items[0].data(0, Qt.ItemDataRole.UserRole)
         return next((c for c in self._current_project["chapters"] if c["id"] == chapter_id), None)
+
+    def _selected_session(self) -> dict | None:
+        if not self._current_project:
+            return None
+        items = self.session_tree.selectedItems()
+        if not items:
+            return None
+        session_id = items[0].data(0, Qt.ItemDataRole.UserRole)
+        return next(
+            (s for s in self._current_project.get("sessions", []) if s["id"] == session_id),
+            None,
+        )
 
     def _select_project(self, project_id: str) -> None:
         for i in range(self.project_tree.topLevelItemCount()):
@@ -509,8 +648,16 @@ class ProjectsPage(QWidget):
             self.delete_chapter_btn,
             self.queue_chapter_btn,
             self.queue_all_btn,
+            self.regenerate_btn,
+            self.read_output_btn,
+            self.reveal_output_btn,
+            self.refresh_outputs_btn,
+            self.session_title_edit,
             self.session_tree,
             self.build_sessions_btn,
+            self.rename_session_btn,
+            self.split_session_btn,
+            self.merge_session_btn,
             self.complete_session_btn,
             self.resume_session_btn,
         ]:

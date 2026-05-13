@@ -121,6 +121,77 @@ class ProjectStorageTests(unittest.TestCase):
             self.assertEqual(projects.session_progress(loaded, loaded["sessions"][1]), (1, 1))
             self.assertIsNone(projects.next_unfinished_session(loaded))
 
+    def test_update_split_and_merge_sessions(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            project = projects.create_project("Book", root=root)
+            first = projects.add_chapter(project["id"], "One", "word " * 10, root=root)
+            second = projects.add_chapter(project["id"], "Two", "word " * 10, root=root)
+            third = projects.add_chapter(project["id"], "Three", "word " * 10, root=root)
+            sessions = projects.rebuild_sessions(project["id"], target_minutes=20, root=root)
+            session_id = sessions[0]["id"]
+
+            renamed = projects.update_session(
+                project["id"],
+                session_id,
+                title="Morning reading",
+                root=root,
+            )
+            self.assertEqual(renamed["title"], "Morning reading")
+
+            split = projects.split_session_after_chapter(
+                project["id"],
+                session_id,
+                first["id"],
+                root=root,
+            )
+            self.assertIsNotNone(split)
+            loaded = projects.load_project(project["id"], root)
+            self.assertEqual(len(loaded["sessions"]), 2)
+            self.assertEqual(loaded["sessions"][0]["chapter_ids"], [first["id"]])
+            self.assertEqual(
+                loaded["sessions"][1]["chapter_ids"],
+                [second["id"], third["id"]],
+            )
+
+            merged = projects.merge_session_with_next(project["id"], session_id, root=root)
+            self.assertIsNotNone(merged)
+            loaded = projects.load_project(project["id"], root)
+            self.assertEqual(len(loaded["sessions"]), 1)
+            self.assertEqual(
+                loaded["sessions"][0]["chapter_ids"],
+                [first["id"], second["id"], third["id"]],
+            )
+
+    def test_refresh_project_outputs_marks_missing_and_generated(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            output = Path(tmp) / "chapter.mp3"
+            output.write_bytes(b"fake mp3")
+            project = projects.create_project("Book", root=root)
+            first = projects.add_chapter(project["id"], "One", "text", root=root)
+            second = projects.add_chapter(project["id"], "Two", "text", root=root)
+            projects.update_chapter(
+                project["id"],
+                first["id"],
+                status="queued",
+                output_path=str(output),
+                root=root,
+            )
+            projects.update_chapter(
+                project["id"],
+                second["id"],
+                status="generated",
+                output_path=str(Path(tmp) / "missing.mp3"),
+                root=root,
+            )
+
+            refreshed = projects.refresh_project_outputs(project["id"], root=root)
+            chapters = {chapter["id"]: chapter for chapter in refreshed["chapters"]}
+
+            self.assertEqual(chapters[first["id"]]["status"], "generated")
+            self.assertEqual(chapters[second["id"]]["status"], "missing")
+
 
 if __name__ == "__main__":
     unittest.main()

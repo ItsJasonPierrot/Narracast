@@ -354,6 +354,112 @@ def next_unfinished_session(project: dict[str, Any]) -> dict[str, Any] | None:
     return None
 
 
+def update_session(
+    project_id: str,
+    session_id: str,
+    *,
+    title: str | None = None,
+    status: str | None = None,
+    chapter_ids: list[str] | None = None,
+    root: Path = PROJECTS_DIR,
+) -> dict[str, Any] | None:
+    """Update a session title, status, or chapter membership."""
+    project = load_project(project_id, root)
+    if project is None:
+        return None
+    for session in project.get("sessions", []):
+        if session["id"] != session_id:
+            continue
+        if title is not None:
+            session["title"] = _clean_str(title) or session["title"]
+        if status is not None:
+            session["status"] = _clean_str(status) or session["status"]
+        if chapter_ids is not None:
+            known = {chapter["id"] for chapter in project.get("chapters", [])}
+            session["chapter_ids"] = [
+                chapter_id for chapter_id in chapter_ids if chapter_id in known
+            ]
+        session["updated_at"] = _now()
+        save_project(project, root=root)
+        return session
+    return None
+
+
+def split_session_after_chapter(
+    project_id: str,
+    session_id: str,
+    chapter_id: str,
+    *,
+    root: Path = PROJECTS_DIR,
+) -> tuple[dict[str, Any], dict[str, Any]] | None:
+    """Split a session into two sessions after *chapter_id*."""
+    project = load_project(project_id, root)
+    if project is None:
+        return None
+    sessions = project.get("sessions", [])
+    for index, session in enumerate(sessions):
+        if session["id"] != session_id or chapter_id not in session["chapter_ids"]:
+            continue
+        split_at = session["chapter_ids"].index(chapter_id) + 1
+        left_ids = session["chapter_ids"][:split_at]
+        right_ids = session["chapter_ids"][split_at:]
+        if not left_ids or not right_ids:
+            return None
+        session["chapter_ids"] = left_ids
+        session["updated_at"] = _now()
+        new_session = _session_payload(index + 2, right_ids)
+        new_session["title"] = f"{session['title']} B"
+        sessions.insert(index + 1, new_session)
+        save_project(project, root=root)
+        return session, new_session
+    return None
+
+
+def merge_session_with_next(
+    project_id: str,
+    session_id: str,
+    *,
+    root: Path = PROJECTS_DIR,
+) -> dict[str, Any] | None:
+    """Merge a session with the session immediately after it."""
+    project = load_project(project_id, root)
+    if project is None:
+        return None
+    sessions = project.get("sessions", [])
+    for index, session in enumerate(sessions[:-1]):
+        if session["id"] != session_id:
+            continue
+        next_session = sessions.pop(index + 1)
+        session["chapter_ids"] = [
+            *session.get("chapter_ids", []),
+            *next_session.get("chapter_ids", []),
+        ]
+        session["status"] = "open"
+        session["updated_at"] = _now()
+        save_project(project, root=root)
+        return session
+    return None
+
+
+def refresh_project_outputs(project_id: str, root: Path = PROJECTS_DIR) -> dict[str, Any] | None:
+    """Refresh generated/missing status based on chapter output files."""
+    project = load_project(project_id, root)
+    if project is None:
+        return None
+    changed = False
+    for chapter in project.get("chapters", []):
+        output_path = chapter.get("output_path", "")
+        if not output_path:
+            continue
+        exists = Path(output_path).exists()
+        new_status = "generated" if exists else "missing"
+        if chapter.get("status") != new_status:
+            chapter["status"] = new_status
+            chapter["updated_at"] = _now()
+            changed = True
+    return save_project(project, root=root) if changed else project
+
+
 def mark_chapter_queued(project_id: str, chapter_id: str, root: Path = PROJECTS_DIR) -> None:
     update_chapter(project_id, chapter_id, status="queued", root=root)
 

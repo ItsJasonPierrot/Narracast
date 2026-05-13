@@ -29,6 +29,7 @@ FINALIZE_KEYS = ("mp3_export_s", "id3_s", "metadata_write_s")
 
 @dataclass(frozen=True)
 class TimingReport:
+    sidecar_count: int
     file_count: int
     totals: dict[str, float]
     total_time_s: float
@@ -94,7 +95,12 @@ def analyze_generation_timings(output_dir: Path = OUTPUT_DIR, limit: int = 20) -
     finalize_time_s = totals.get("finalize_s") or sum(totals.get(k, 0.0) for k in FINALIZE_KEYS)
     finalize_share = finalize_time_s / total_time_s if total_time_s > 0 else 0.0
 
-    if file_count == 0:
+    if file_count == 0 and sidecars:
+        recommendation = (
+            f"Found {len(sidecars)} sidecar file(s), but none include generation_timings. "
+            "Generate a new MP3 with the current version, then run this again."
+        )
+    elif file_count == 0:
         recommendation = "No generation timing data found yet. Generate an MP3, then run this again."
     elif finalize_share >= 0.20 and finalize_time_s >= 10:
         recommendation = (
@@ -112,6 +118,7 @@ def analyze_generation_timings(output_dir: Path = OUTPUT_DIR, limit: int = 20) -
         )
 
     return TimingReport(
+        sidecar_count=len(sidecars),
         file_count=file_count,
         totals={k: round(v, 4) for k, v in sorted(totals.items())},
         total_time_s=round(total_time_s, 4),

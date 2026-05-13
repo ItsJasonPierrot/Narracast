@@ -4,6 +4,8 @@ Narracast turns anything worth reading into something worth hearing — right on
 
 A fully offline native macOS desktop app built with Python and PySide6, powered by F5-TTS.
 
+<img width="1435" height="773" alt="image" src="https://github.com/user-attachments/assets/20b23b5f-0def-4683-87d8-bbbc92b97e5a" />
+
 ---
 
 ## Development approach

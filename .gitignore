@@ -39,6 +39,9 @@ projects/*
 *.icns
 **/*.DS_Store
 
+# AI agent workspaces
+.claude/
+
 # IDE
 .vscode/
 .idea/

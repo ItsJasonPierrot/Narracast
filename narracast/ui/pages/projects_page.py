@@ -26,6 +26,7 @@ from PySide6.QtWidgets import (
 )
 
 from narracast.chapter_splitter import import_chapters
+from narracast.mp3_folder_import import import_mp3_folder
 from narracast.output_files import is_supported_audio_path, load_file
 from narracast.platform import reveal_path
 from narracast.projects import (
@@ -195,6 +196,10 @@ class ProjectsPage(QWidget):
         self.import_file_btn.setIcon(icons.icon(icons.IMPORT_FILE))
         self.import_file_btn.clicked.connect(self._import_text_file)
         split_row.addWidget(self.import_file_btn)
+        self.import_mp3_folder_btn = QPushButton("Import MP3 folder")
+        self.import_mp3_folder_btn.setIcon(icons.icon(icons.FOLDER_OPEN))
+        self.import_mp3_folder_btn.clicked.connect(self._import_mp3_folder)
+        split_row.addWidget(self.import_mp3_folder_btn)
         self.split_chapters_btn = QPushButton("Import pasted text")
         self.split_chapters_btn.setIcon(icons.icon(icons.SCISSORS))
         self.split_chapters_btn.clicked.connect(self._split_pasted_text)
@@ -645,6 +650,50 @@ class ProjectsPage(QWidget):
             source_path=path,
         )
 
+    def _import_mp3_folder(self) -> None:
+        if not self._current_project:
+            return
+        folder = QFileDialog.getExistingDirectory(
+            self,
+            "Select folder containing MP3 files",
+            "",
+            QFileDialog.Option.ShowDirsOnly,
+        )
+        if not folder:
+            return
+        try:
+            summary, project = import_mp3_folder(
+                self._current_project["id"],
+                folder,
+            )
+        except ValueError as exc:
+            self.status_label.setText(str(exc))
+            return
+        if project is None:
+            self.status_label.setText("Project not found.")
+            return
+        if summary.total == 0:
+            self.status_label.setText("No MP3 files found in that folder.")
+            return
+        parts = [f"Imported {summary.total} MP3{'s' if summary.total != 1 else ''}."]
+        if summary.imported_with_sidecar:
+            parts.append(
+                f"{summary.imported_with_sidecar} linked"
+                f" (sidecar{'s' if summary.imported_with_sidecar != 1 else ''} found)."
+            )
+        if summary.imported_as_stub:
+            parts.append(
+                f"{summary.imported_as_stub} stub"
+                f"{'s' if summary.imported_as_stub != 1 else ''} (no sidecar — add text to queue)."
+            )
+        if summary.sessions_built:
+            parts.append(
+                f"Built {summary.sessions_built}"
+                f" session{'s' if summary.sessions_built != 1 else ''}."
+            )
+        self.status_label.setText(" ".join(parts))
+        self._load_project(self._current_project["id"])
+
     def _import_text_as_chapters(
         self,
         text: str,
@@ -895,6 +944,7 @@ class ProjectsPage(QWidget):
             self.chapter_text_edit,
             self.split_marker_edit,
             self.import_file_btn,
+            self.import_mp3_folder_btn,
             self.split_chapters_btn,
             self.add_chapter_btn,
             self.queue_all_btn,

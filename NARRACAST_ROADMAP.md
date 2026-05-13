@@ -424,7 +424,7 @@ This is the recommended takeover context for the next developer.
 
 #### Queue Audio Polish Parity
 
-**Status:** Open.
+**Status:** Done. (Was already implemented alongside audio polish — roadmap entry was stale.)
 
 **Description:** Make queued generation use the same Advanced audio polish settings as immediate Generate.
 
@@ -432,16 +432,16 @@ This is the recommended takeover context for the next developer.
 
 **Requirements:**
 
-- Add an `audio_polish` field to `queue_manager.Job`.
-- Pass `GeneratePage._current_polish()` into `add_to_queue(...)`.
-- Preserve polish settings when retrying failed jobs.
-- Pass queued polish settings into `generate_core(..., audio_polish=...)`.
-- Add tests proving queued jobs and retried jobs preserve polish settings.
+- Done: `audio_polish` field on `queue_manager.Job`.
+- Done: `add_to_queue()` accepts and stores `AudioPolishSettings | dict | None`.
+- Done: Retry preserves `audio_polish` from the original job.
+- Done: Worker reconstructs `AudioPolishSettings.from_dict()` and passes to `generate_core()`.
+- Done: Generate page Queue button passes `_current_polish()` into `add_to_queue()`.
+- Done: Tests for `add_to_queue` preserving polish and retry preserving polish.
 
 **Implementation Notes:**
 
-- Store an `AudioPolishSettings` instance or plain dict; if using a dict, reconstruct with `AudioPolishSettings.from_dict(...)` before calling `generate_core`.
-- Keep the default queue behaviour unchanged when no advanced options are selected.
+- Projects page `_queue_chapter()` intentionally omits audio_polish — projects have no polish controls by design.
 
 **Ratings:**
 

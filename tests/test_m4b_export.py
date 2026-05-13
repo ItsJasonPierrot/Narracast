@@ -7,6 +7,7 @@ from pathlib import Path
 
 from narracast.m4b_export import (
     ChapterExportInfo,
+    _escape_concat_path,
     audit_project_chapters,
     build_ffmetadata,
 )
@@ -222,6 +223,16 @@ class ExportM4BValidationTests(unittest.TestCase):
             with self.assertRaises(ValueError) as ctx:
                 export_m4b(project, out, skip_missing=False)
             self.assertIn("not ready", str(ctx.exception))
+
+    def test_concat_path_escapes_single_quotes_and_backslashes(self):
+        self.assertEqual(
+            _escape_concat_path(r"/tmp/Jason's\\chapter.mp3"),
+            r"/tmp/Jason\'s\\\\chapter.mp3",
+        )
+
+    def test_concat_path_rejects_newlines(self):
+        with self.assertRaises(ValueError):
+            _escape_concat_path("/tmp/bad\nchapter.mp3")
 
 
 if __name__ == "__main__":

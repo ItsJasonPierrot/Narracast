@@ -197,6 +197,11 @@ def export_m4b(
             "Generate audio for at least one chapter first."
         )
 
+    output = Path(output_path).expanduser()
+    if output.suffix.lower() != ".m4b":
+        raise ValueError("M4B export path must end with .m4b")
+    output.parent.mkdir(parents=True, exist_ok=True)
+
     if not shutil.which("ffmpeg"):
         raise RuntimeError(
             "ffmpeg not found on PATH. Install ffmpeg to export M4B files."
@@ -210,7 +215,7 @@ def export_m4b(
         # 1. Write concat list.
         concat_file = tmp_path / "concat.txt"
         concat_lines = [
-            f"file '{chapter.output_path}'" for chapter in ready
+            f"file '{_escape_concat_path(chapter.output_path)}'" for chapter in ready
         ]
         concat_file.write_text("\n".join(concat_lines), encoding="utf-8")
 
@@ -242,12 +247,12 @@ def export_m4b(
                 "-map_metadata", "1",
                 "-c", "copy",
                 "-movflags", "+faststart",
-                output_path,
+                str(output),
             ]
         )
 
-    _notify(on_progress, f"Export complete → {output_path}")
-    return str(Path(output_path).resolve())
+    _notify(on_progress, f"Export complete → {output}")
+    return str(output.resolve())
 
 
 # ── Helpers ─────────────────────────────────────────────────────────────────
@@ -256,6 +261,13 @@ def export_m4b(
 def _notify(cb: Callable[[str], None] | None, msg: str) -> None:
     if cb is not None:
         cb(msg)
+
+
+def _escape_concat_path(path: str) -> str:
+    """Escape a path for ffmpeg concat-demuxer single-quoted file entries."""
+    if "\n" in path or "\r" in path:
+        raise ValueError("Audio paths cannot contain newline characters")
+    return path.replace("\\", "\\\\").replace("'", "\\'")
 
 
 def _run_ffmpeg(cmd: list[str]) -> None:

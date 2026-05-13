@@ -5,11 +5,8 @@ import re
 from pathlib import Path
 from typing import Any
 
-from .paths import APP_DIR
+from .paths import SETTINGS_PATH
 from .presets import DEFAULT_PRESET, GENERATION_PRESETS
-
-
-SETTINGS_PATH = APP_DIR / "settings.json"
 
 
 DEFAULT_SETTINGS: dict[str, Any] = {

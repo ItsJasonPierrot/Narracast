@@ -27,7 +27,7 @@ from PySide6.QtWidgets import (
 )
 
 from narracast.chapter_splitter import import_chapters
-from narracast.output_files import load_file
+from narracast.output_files import is_supported_audio_path, load_file
 from narracast.projects import (
     add_chapter,
     create_project,
@@ -572,18 +572,18 @@ class ProjectsPage(QWidget):
     def _read_selected_output(self) -> None:
         chapter = self._selected_chapter()
         output_path = chapter.get("output_path", "") if chapter else ""
-        if output_path and Path(output_path).exists():
+        if is_supported_audio_path(output_path):
             self.open_in_reader.emit(output_path)
         else:
-            self.status_label.setText("No generated output found for this chapter.")
+            self.status_label.setText("No readable audio output found for this chapter.")
 
     def _reveal_selected_output(self) -> None:
         chapter = self._selected_chapter()
         output_path = chapter.get("output_path", "") if chapter else ""
-        if output_path and Path(output_path).exists():
+        if is_supported_audio_path(output_path):
             subprocess.Popen(["open", "-R", output_path])
         else:
-            self.status_label.setText("No generated output found for this chapter.")
+            self.status_label.setText("No revealable audio output found for this chapter.")
 
     def _refresh_output_status(self) -> None:
         if not self._current_project:

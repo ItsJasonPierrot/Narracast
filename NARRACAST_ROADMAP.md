@@ -10,12 +10,14 @@ Ratings use a 1–5 scale: **User Value** (how much this improves real use), **D
 
 ## v1.0.0 — Shipped (2026-05-13)
 
-Everything below is complete and tagged at `v1.0.0`.
+Everything below describes the current completed baseline. The original `v1.0.0`
+tag predates a few post-v1 hardening and packaging notes called out under
+Infrastructure.
 
 **Generation**
 - F5-TTS offline speech synthesis — Best / Balanced / Fast / Draft presets
 - Voice cloning from any audio file; Browse… skips Demucs entirely
-- Named voice library under `voices/` with reference audio, transcript, metadata, preview, rename, delete
+- Named voice library in the Narracast app-data folder with reference audio, transcript, metadata, preview, rename, delete
 - Reference transcript caching (path / mtime / transcript hash); cache hits recorded in sidecars
 - Preview first section — Draft preset, zero pauses, in-memory cache keyed on text + voice + reference signature
 - Paragraph pause slider (0–2 s) and Sentence pause slider (default-off, generates silence between sentences)
@@ -33,7 +35,7 @@ Everything below is complete and tagged at `v1.0.0`.
 - Bookmarks with labels, Jump, Delete; last position saved per file; resume on reopen
 - –10 s / +10 s / Repeat current chunk controls
 - Auto-pause after paragraph gaps; Study mode (pauses on each sentence advance, Play to continue)
-- Display controls: font family, size (S / M / L / XL), theme (dark / light / high-contrast / warm), line and paragraph spacing — all apply to full-text and Focus Mode, persist in `settings.json`
+- Display controls: font family, size (S / M / L / XL), theme (dark / light / high-contrast / warm), line and paragraph spacing — all apply to full-text and Focus Mode, persist in app-data `settings.json`
 - Reader controls disabled until a file is loaded; Read + Play disabled for files without sidecar metadata
 
 **Projects**
@@ -49,17 +51,20 @@ Everything below is complete and tagged at `v1.0.0`.
 - qtawesome mdi6 icon system (`narracast/ui/icons.py`) — no emoji in the interface
 - Sidecar `.json` for every MP3: source text, title/part, voice, speed, preset, pauses, chunk timeline, highlight units, text offsets, audio timings, stage timings, polish settings, project/chapter link, last position, bookmarks
 - ID3 tags (title, album, track, artist) on every generated MP3
-- Persistent `settings.json`: voice, speed, preset, title, part, pauses, theme, geometry, last page, all reader display options
+- Persistent app-data `settings.json`: voice, speed, preset, title, part, pauses, theme, geometry, last page, all reader display options
+- User data separated from the repo/app bundle: projects, voices, reference files, generated output, and settings live under the platform app-data folder with non-destructive legacy migration
+- Text/PDF import size guard, audio-path validation for reader/reveal actions, and escaped ffmpeg concat paths for M4B export
 - macOS app bundle with branded `.icns`, splash screen, background model loader, `~/Library/Logs/Narracast.log` for launch errors
-- 185 backend tests
+- Cross-platform release packaging helper and release build notes for macOS, Windows, and Linux
+- 190 backend tests
 
 ---
 
 ## Current Baseline (post-v1)
 
-All v1 features are working. The next developer can start from `app.py`, `narracast/ui/main_window.py`, and `narracast/ui/pages/`. The backend is split cleanly under `narracast/`. All icons come from `narracast/ui/icons.py` — never hardcode mdi6 strings in pages. Tests run via `venv/bin/python -m pytest tests/` (pytest installed) or `venv/bin/python -m unittest discover -s tests`.
+All v1 features are working. The next developer can start from `app.py`, `narracast/ui/main_window.py`, and `narracast/ui/pages/`. The backend is split cleanly under `narracast/`. All icons come from `narracast/ui/icons.py` — never hardcode mdi6 strings in pages. Tests run with `venv/bin/python -m unittest discover -s tests`; `pytest` is optional if installed.
 
-Platform note: `afplay` and `open -R` / `open` are macOS-only. They are intentional for the v1 macOS target. Abstract them into `narracast/platform.py` before any cross-platform work.
+Platform note: release packaging docs exist for all three desktop OSes, but runtime launch/play/reveal behavior is still macOS-first (`afplay` and `open -R` / `open`). Abstract those commands into `narracast/platform.py` before calling Windows/Linux support complete.
 
 ---
 
@@ -88,22 +93,7 @@ Items are ordered by suggested build sequence. Difficulty and risk use the 1–5
 
 ---
 
-### 2 · Manual Session Reorder
-
-**Why:** Projects page currently lists sessions in the order they were built. Users need to reorganize sessions after edits without rebuilding all sessions.
-
-**Scope:**
-- Drag-and-drop reorder in the session tree, or Up / Down buttons.
-- Persist the new order in project JSON.
-- No change to session content or chapter membership.
-
-| User Value | Difficulty | Risk |
-|---:|---:|---:|
-| 3 | 2 | 1 |
-
----
-
-### 3 · Voice Library Polish
+### 2 · Voice Library Polish
 
 **Why:** Saved voices exist and work, but the transcript editing flow is friction-heavy.
 
@@ -115,6 +105,21 @@ Items are ordered by suggested build sequence. Difficulty and risk use the 1–5
 | User Value | Difficulty | Risk |
 |---:|---:|---:|
 | 3 | 2 | 2 |
+
+---
+
+### 3 · Manual Session Reorder
+
+**Why:** Projects page currently lists sessions in the order they were built. Users need to reorganize sessions after edits without rebuilding all sessions.
+
+**Scope:**
+- Drag-and-drop reorder in the session tree, or Up / Down buttons.
+- Persist the new order in project JSON.
+- No change to session content or chapter membership.
+
+| User Value | Difficulty | Risk |
+|---:|---:|---:|
+| 3 | 2 | 1 |
 
 ---
 
@@ -134,7 +139,30 @@ Items are ordered by suggested build sequence. Difficulty and risk use the 1–5
 
 ---
 
-### 5 · Streaming Chunk Playback
+### 5 · Security / Privacy Hardening Follow-up
+
+**Status:** First pass complete. Keep this as a release checklist item.
+
+**Done:**
+- Runtime data moved to platform app-data storage with non-destructive migration from legacy repo-root folders.
+- Text/PDF imports reject unexpectedly large files before parsing.
+- Project reader/reveal actions require existing supported audio files.
+- M4B concat files escape quotes/backslashes and reject newline-bearing paths.
+- Source launcher no longer hardcodes a personal repository path.
+
+**Remaining before public distribution:**
+- Add signed/notarized macOS builds and Windows signing if distributing outside local/dev machines.
+- Publish SHA-256 checksums for release archives.
+- Pin or lock dependencies for reproducible release builds.
+- Add a short in-app privacy note that sidecars can store source text, reader position, and bookmarks.
+
+| User Value | Difficulty | Risk |
+|---:|---:|---:|
+| 4 | 2 | 2 |
+
+---
+
+### 6 · Streaming Chunk Playback
 
 **Why:** Long chapters take minutes to generate. Streaming lets the user start listening after the first chunk instead of waiting for the full MP3.
 
@@ -152,7 +180,7 @@ Items are ordered by suggested build sequence. Difficulty and risk use the 1–5
 
 ---
 
-### 6 · Local TTS Backend Process
+### 7 · Local TTS Backend Process
 
 **Why:** Moving F5-TTS into a persistent worker process isolates crashes, simplifies cancellation, and enables streaming in a cleaner way.
 
@@ -165,11 +193,11 @@ Items are ordered by suggested build sequence. Difficulty and risk use the 1–5
 
 | User Value | Difficulty | Risk |
 |---:|---:|---:|
-| 4 | 4 | 4 |
+| 4 | 5 | 4 |
 
 ---
 
-### 7 · Word-Level Highlighting — Deferred
+### 8 · Word-Level Highlighting — Deferred
 
 **Why deferred:** F5-TTS produces no word timestamps. Forced alignment (e.g., `whisperx`, `montreal-forced-aligner`) requires a full second-pass over the generated audio and adds a heavy dependency. Sentence-level highlighting already covers most of the user value at a fraction of the complexity.
 
@@ -181,7 +209,7 @@ Items are ordered by suggested build sequence. Difficulty and risk use the 1–5
 
 ---
 
-### 8 · Mobile Companion App — Deferred
+### 9 · Mobile Companion App — Deferred
 
 This is a separate product. Revisit after the desktop app has a stable release history and a clear sync story.
 

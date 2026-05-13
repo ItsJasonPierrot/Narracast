@@ -77,7 +77,7 @@ The archive contains the PyInstaller `Narracast` app directory.
 - Use `--onefile` only for small smoke builds. The default app-directory output
   starts faster and is easier to inspect.
 - Use `--no-archive` if you want the raw PyInstaller output left in `dist/`.
-- User data folders such as `output/`, `projects/`, and `voices/` are intentionally
-  ignored by git. Release builds include empty placeholders only.
+- User data folders such as `output/`, `projects/`, and `voices/` live in the
+  platform app-data folder at runtime and are not bundled into releases.
 - Large local assets such as `reference.wav`, `raw_audio/`, and generated MP3s are
   not release inputs.

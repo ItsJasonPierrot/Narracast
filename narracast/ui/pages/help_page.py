@@ -22,7 +22,7 @@ _FAQ = [
         "How to generate",
         "Paste your text into the Generate tab, choose a voice reference, "
         "set the speed and quality mode, then click Generate MP3. "
-        "The audio file will be saved to the output/ folder when done.",
+        "The audio file will be saved to your Narracast app-data output folder when done.",
     ),
     (
         icons.PLAYLIST_PLAY,
@@ -41,7 +41,7 @@ _FAQ = [
     (
         icons.FILE_MUSIC,
         "Generated files",
-        "All output MP3 files are saved in output/ at the project root. "
+        "All output MP3 files are saved in your Narracast app-data output folder. "
         "Each MP3 has a matching .json sidecar file that stores the source "
         "text, timeline, bookmarks, and last playback position so the reader "
         "can resume where you left off.",

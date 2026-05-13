@@ -6,6 +6,10 @@ from pathlib import Path
 
 from .paths import OUTPUT_DIR
 
+MAX_IMPORT_BYTES = 25 * 1024 * 1024
+
+SUPPORTED_AUDIO_SUFFIXES = {".mp3", ".m4b", ".wav", ".aac", ".m4a"}
+
 
 def make_output_filename(text, title="", part=""):
     date = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
@@ -27,6 +31,13 @@ def load_file(filepath):
     if filepath is None:
         return ""
     path = Path(filepath)
+    try:
+        if path.stat().st_size > MAX_IMPORT_BYTES:
+            limit_mb = MAX_IMPORT_BYTES // (1024 * 1024)
+            return f"File is too large to import safely. Limit: {limit_mb} MB."
+    except OSError as e:
+        return f"Could not read file: {e}"
+
     if path.suffix.lower() == ".pdf":
         try:
             from pdfminer.high_level import extract_text
@@ -39,6 +50,19 @@ def load_file(filepath):
     elif path.suffix.lower() == ".txt":
         return path.read_text(encoding="utf-8", errors="replace")
     return "Only .txt and .pdf files are supported."
+
+
+def is_supported_audio_path(path: str | Path | None) -> bool:
+    """Return True when *path* points to an existing supported audio file."""
+    if path is None:
+        return False
+    try:
+        audio_path = Path(path).expanduser()
+    except (TypeError, ValueError):
+        return False
+    if "\n" in str(audio_path) or "\r" in str(audio_path):
+        return False
+    return audio_path.exists() and audio_path.suffix.lower() in SUPPORTED_AUDIO_SUFFIXES
 
 
 def list_history_files():

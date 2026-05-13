@@ -10,14 +10,16 @@ class BackendHelperTests(unittest.TestCase):
     # ── output_files helpers ──────────────────────────────────────────────────
 
 
-    def test_app_paths_are_relative_to_project_root(self):
+    def test_app_paths_separate_assets_from_user_data(self):
         self.assertEqual(paths.APP_DIR, Path(__file__).resolve().parents[1])
-        self.assertEqual(paths.OUTPUT_DIR, paths.APP_DIR / "output")
-        self.assertEqual(paths.CLEAN_VOICE, paths.APP_DIR / "clean_voice")
-        self.assertEqual(paths.VOICES_DIR, paths.APP_DIR / "voices")
-        self.assertEqual(paths.PROJECTS_DIR, paths.APP_DIR / "projects")
-        self.assertEqual(paths.REFERENCE, paths.APP_DIR / "reference.wav")
-        self.assertEqual(paths.REFERENCE_TEXT, paths.APP_DIR / "reference.txt")
+        self.assertEqual(paths.ICON_PATH, paths.APP_DIR / "assets" / "Narracast_Icon.png")
+        self.assertEqual(paths.OUTPUT_DIR, paths.DATA_DIR / "output")
+        self.assertEqual(paths.CLEAN_VOICE, paths.DATA_DIR / "clean_voice")
+        self.assertEqual(paths.VOICES_DIR, paths.DATA_DIR / "voices")
+        self.assertEqual(paths.PROJECTS_DIR, paths.DATA_DIR / "projects")
+        self.assertEqual(paths.REFERENCE, paths.DATA_DIR / "reference.wav")
+        self.assertEqual(paths.REFERENCE_TEXT, paths.DATA_DIR / "reference.txt")
+        self.assertEqual(paths.SETTINGS_PATH, paths.DATA_DIR / "settings.json")
 
     def test_make_output_filename_uses_title_and_part(self):
         name = output_files.make_output_filename("ignored text", "Conquest of Bread", "Part 1")
@@ -97,6 +99,27 @@ class BackendHelperTests(unittest.TestCase):
             result = output_files.load_file(path)
             # Returns a user-facing warning string rather than raising
             self.assertIn("Only .txt and .pdf files are supported", result)
+        finally:
+            Path(path).unlink(missing_ok=True)
+
+    def test_load_file_rejects_oversized_import(self):
+        with tempfile.NamedTemporaryFile("wb", suffix=".txt", delete=False) as f:
+            f.truncate(output_files.MAX_IMPORT_BYTES + 1)
+            path = f.name
+        try:
+            result = output_files.load_file(path)
+            self.assertIn("too large", result)
+        finally:
+            Path(path).unlink(missing_ok=True)
+
+    def test_is_supported_audio_path_requires_existing_audio_file(self):
+        with tempfile.NamedTemporaryFile("wb", suffix=".mp3", delete=False) as f:
+            f.write(b"fake audio")
+            path = f.name
+        try:
+            self.assertTrue(output_files.is_supported_audio_path(path))
+            self.assertFalse(output_files.is_supported_audio_path(path + "\n"))
+            self.assertFalse(output_files.is_supported_audio_path(path.replace(".mp3", ".txt")))
         finally:
             Path(path).unlink(missing_ok=True)
 

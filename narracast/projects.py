@@ -10,6 +10,7 @@ from pathlib import Path
 from typing import Any
 
 from .paths import PROJECTS_DIR
+from .output_files import is_supported_audio_path
 
 
 def _now() -> float:
@@ -544,7 +545,7 @@ def session_readable_chapters(
         if not chapter:
             continue
         output_path = chapter.get("output_path", "")
-        if output_path and Path(output_path).exists():
+        if is_supported_audio_path(output_path):
             paths.append(output_path)
     return paths
 

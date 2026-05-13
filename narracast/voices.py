@@ -101,6 +101,8 @@ def _profile_from_folder(folder: Path) -> VoiceProfile | None:
 
 def list_voice_profiles() -> list[VoiceProfile]:
     profiles = []
+    if not VOICES_DIR.exists():
+        return profiles
     for folder in sorted(VOICES_DIR.iterdir()):
         if not folder.is_dir():
             continue

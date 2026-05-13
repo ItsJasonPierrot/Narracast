@@ -271,7 +271,7 @@ Click **Focus Mode** to switch from the full-text scrolling view to a focused th
 
 Use the **S / M / L / XL** size buttons to adjust the text size to whatever feels comfortable.
 
-The reader also includes display controls for theme, font, and spacing. These apply to both full-text reading and Focus Mode, and persist in `settings.json`.
+The reader also includes display controls for theme, font, and spacing. These apply to both full-text reading and Focus Mode, and persist in app-data `settings.json`.
 
 #### Cognitive pacing
 
@@ -293,7 +293,7 @@ You can **Browse…** to import any WAV, MP3, FLAC, M4A, OGG, or AIFF file direc
 You can save the clip two ways:
 
 - **Save as reference.wav** — updates the active reference voice immediately.
-- **Save named voice** — stores a reusable voice profile under `voices/` with its own `reference.wav`, `reference.txt`, and `metadata.json`.
+- **Save named voice** — stores a reusable voice profile in app-data storage with its own `reference.wav`, `reference.txt`, and `metadata.json`.
 
 Saved voices appear in the Generate voice selector immediately. Each saved transcript is passed into F5-TTS as `ref_text`, so generation can avoid unnecessary reference-text guessing.
 
@@ -328,13 +328,13 @@ Quick reference guide built into the app.
 The core feature set — generation, reading companion, project mode, session tracking, and M4B export — is complete. Active development is focused on:
 
 ### Near-term polish
-- **Queue audio polish parity** — carry Advanced audio polish settings (bitrate, normalization, fade, trim) through queued jobs, not just immediate generation
+- **Voice library polish** — edit saved transcripts in place and switch a saved voice into the active reference slot
 - **Manual session reorder** — drag sessions into a different order within a project
 - **Project import flow** — import an existing folder of MP3s as a project
 
 ### Larger features
-- **Streaming chunk playback** — start listening after the first generated chunk instead of waiting for the full export
 - **Async MP3 finalization** — data-gated: run real long-chapter generations and check the Timing Analysis dialog; only worth building if finalization is a meaningful share of total time
+- **Streaming chunk playback** — start listening after the first generated chunk instead of waiting for the full export
 
 ### Deferred / research
 - **Word-level highlighting** — per-word karaoke-style sync using forced speech alignment
@@ -343,9 +343,23 @@ The core feature set — generation, reading companion, project mode, session tr
 
 ---
 
+## Local Data
+
+Narracast keeps source code and runtime data separate. Generated audio, project JSON, saved voices, settings, and active reference files are stored in the platform app-data folder by default:
+
+```text
+macOS:   ~/Library/Application Support/Narracast/
+Windows: %APPDATA%/Narracast/
+Linux:   ~/.local/share/narracast/
+```
+
+Set `NARRACAST_DATA_DIR=/path/to/data` to override this for development or portable installs. On first launch, Narracast copies old repo-root runtime folders into the app-data folder without deleting the originals.
+
+Sidecar `.json` files may contain source text, title/part metadata, timing data, reader position, and bookmarks. Everything stays local unless you manually share the files.
+
 ## File naming
 
-Files are saved to the `output/` folder and named automatically:
+Generated MP3s are saved to the app-data `output/` folder and named automatically:
 
 ```
 Conquest-of-Bread_Part-1_2026-05-08_14-32-01.mp3
@@ -365,11 +379,8 @@ Narracast/
 │   ├── Narracast_App_Icon.png       — app bundle icon source
 │   └── Narracast.icns               — generated macOS app icon
 ├── app.py                           — PySide6 launcher and background model loader
-├── reference.txt                    — transcript for the active reference voice clip
-├── voices/                          — named voice profiles (audio, transcript, metadata)
-├── projects/                        — project JSON files
 ├── narracast/                       — backend package
-│   ├── paths.py                     — project-relative paths
+│   ├── paths.py                     — app assets, app-data paths, legacy data migration
 │   ├── presets.py                   — generation speed/quality presets
 │   ├── text_splitter.py             — chunking and paragraph break handling
 │   ├── audio_generation.py          — F5-TTS inference and MP3 assembly
@@ -407,10 +418,7 @@ Narracast/
 ├── tests/                           — lightweight backend helper tests
 ├── scripts/
 │   └── Narracast.app-launcher.sh    — source copy of the macOS app bundle launcher
-├── venv/                            — Python 3.11 virtual environment
-├── raw_audio/                       — original downloaded audio files
-├── clean_voice/                     — Demucs-separated narrator vocals
-└── output/                          — generated MP3s saved here
+└── venv/                            — Python 3.11 virtual environment
 ```
 
 ---
@@ -445,7 +453,7 @@ Narracast/
 
 ## Transferring MP3s to your phone
 
-- **AirDrop** — open Finder, navigate to the `output/` folder, right-click a file → Share → AirDrop
+- **AirDrop** — in History, use **Open output folder**, then right-click a file → Share → AirDrop
 - **USB** — connect your phone and drag files across in Finder
 
 ---

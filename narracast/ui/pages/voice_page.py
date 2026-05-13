@@ -9,6 +9,7 @@ from typing import Optional
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
     QComboBox,
+    QFileDialog,
     QFrame,
     QHBoxLayout,
     QLabel,
@@ -36,6 +37,7 @@ from narracast.voices import (
     save_voice_profile,
     set_profile_as_reference,
 )
+from narracast.ui import icons
 from narracast.ui.signals import get_signals
 from narracast.ui.widgets import Card, Divider, MutedLabel, SectionLabel
 
@@ -88,18 +90,23 @@ class VoicePage(QWidget):
         edit_row = QHBoxLayout()
         edit_row.setSpacing(8)
         self.rename_profile_btn = QPushButton("Rename / update notes")
+        self.rename_profile_btn.setIcon(icons.icon(icons.RENAME))
         self.rename_profile_btn.setFixedHeight(30)
         self.rename_profile_btn.setEnabled(False)
         self.rename_profile_btn.clicked.connect(self._rename_profile)
         edit_row.addWidget(self.rename_profile_btn)
 
         self.delete_profile_btn = QPushButton("Delete voice")
+        self.delete_profile_btn.setIcon(icons.danger(icons.DELETE))
+        self.delete_profile_btn.setObjectName("danger")
         self.delete_profile_btn.setFixedHeight(30)
         self.delete_profile_btn.setEnabled(False)
         self.delete_profile_btn.clicked.connect(self._delete_profile)
         edit_row.addWidget(self.delete_profile_btn)
 
         self.set_reference_btn = QPushButton("Set as active reference")
+        self.set_reference_btn.setIcon(icons.accent(icons.CHECK))
+        self.set_reference_btn.setObjectName("primary")
         self.set_reference_btn.setFixedHeight(30)
         self.set_reference_btn.setEnabled(False)
         self.set_reference_btn.clicked.connect(self._set_as_reference)
@@ -114,6 +121,7 @@ class VoicePage(QWidget):
         sample_row.addWidget(self.sample_text_edit, stretch=1)
 
         self.preview_profile_btn = QPushButton("Preview saved voice")
+        self.preview_profile_btn.setIcon(icons.icon(icons.PREVIEW_BOX))
         self.preview_profile_btn.setFixedHeight(30)
         self.preview_profile_btn.setEnabled(False)
         self.preview_profile_btn.clicked.connect(self._preview_profile)
@@ -136,6 +144,12 @@ class VoicePage(QWidget):
         self.voice_combo = QComboBox()
         self.voice_combo.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
         track_row.addWidget(self.voice_combo, stretch=1)
+
+        browse_btn = QPushButton("Browse…")
+        browse_btn.setIcon(icons.icon(icons.FOLDER_OPEN))
+        browse_btn.setFixedHeight(30)
+        browse_btn.clicked.connect(self._browse_voice_file)
+        track_row.addWidget(browse_btn)
         card_layout.addLayout(track_row)
 
         time_row = QHBoxLayout()
@@ -222,23 +236,27 @@ class VoicePage(QWidget):
         btn_row.setSpacing(8)
 
         self.extract_btn = QPushButton("Extract clip")
+        self.extract_btn.setIcon(icons.icon(icons.SCISSORS))
         self.extract_btn.setFixedHeight(34)
         self.extract_btn.clicked.connect(self._extract)
         btn_row.addWidget(self.extract_btn)
 
         self.preview_btn = QPushButton("Preview clip")
+        self.preview_btn.setIcon(icons.icon(icons.PLAY))
         self.preview_btn.setFixedHeight(34)
         self.preview_btn.setEnabled(False)
         self.preview_btn.clicked.connect(self._preview)
         btn_row.addWidget(self.preview_btn)
 
         self.stop_btn = QPushButton("Stop")
+        self.stop_btn.setIcon(icons.icon(icons.STOP))
         self.stop_btn.setFixedHeight(34)
         self.stop_btn.setEnabled(False)
         self.stop_btn.clicked.connect(self._stop_preview)
         btn_row.addWidget(self.stop_btn)
 
         self.save_btn = QPushButton("Save as reference.wav")
+        self.save_btn.setIcon(icons.accent(icons.SAVE))
         self.save_btn.setObjectName("primary")
         self.save_btn.setFixedHeight(34)
         self.save_btn.setEnabled(False)
@@ -246,6 +264,7 @@ class VoicePage(QWidget):
         btn_row.addWidget(self.save_btn)
 
         self.save_profile_btn = QPushButton("Save named voice")
+        self.save_profile_btn.setIcon(icons.accent(icons.SAVE_VOICE))
         self.save_profile_btn.setObjectName("secondary")
         self.save_profile_btn.setFixedHeight(34)
         self.save_profile_btn.setEnabled(False)
@@ -277,6 +296,24 @@ class VoicePage(QWidget):
         voices = get_voice_files()
         for name, path in voices.items():
             self.voice_combo.addItem(name, path)
+
+    def _browse_voice_file(self) -> None:
+        path, _ = QFileDialog.getOpenFileName(
+            self,
+            "Select voice audio file",
+            "",
+            "Audio files (*.wav *.mp3 *.flac *.m4a *.ogg *.aiff)",
+        )
+        if not path:
+            return
+        from pathlib import Path
+        name = Path(path).name
+        existing_idx = self.voice_combo.findData(path)
+        if existing_idx >= 0:
+            self.voice_combo.setCurrentIndex(existing_idx)
+        else:
+            self.voice_combo.addItem(name, path)
+            self.voice_combo.setCurrentIndex(self.voice_combo.count() - 1)
 
     def _refresh_library(self) -> None:
         current_id = self.library_combo.currentData()

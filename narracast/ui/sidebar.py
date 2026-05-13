@@ -17,18 +17,19 @@ from PySide6.QtWidgets import (
 )
 
 from narracast.paths import APP_DIR
+from narracast.ui import icons
 from narracast.ui.widgets import Divider, MutedLabel, StatusDot
 
 _ICON_PATH = APP_DIR / "assets" / "Narracast_Icon.png"
 
 _NAV_ITEMS = [
-    ("generate", "🎙  Generate"),
-    ("projects", "📚  Projects"),
-    ("queue", "📋  Queue"),
-    ("voice", "🎤  Voice Reference"),
-    ("history", "📁  History"),
-    ("read", "📖  Read"),
-    ("help", "❓  Help"),
+    ("generate",  "Generate",       "mdi6.microphone"),
+    ("projects",  "Projects",       "mdi6.book-multiple"),
+    ("queue",     "Queue",          "mdi6.playlist-music"),
+    ("voice",     "Voice",          "mdi6.account-voice"),
+    ("history",   "History",        "mdi6.history"),
+    ("read",      "Read",           "mdi6.book-open-page-variant"),
+    ("help",      "Help",           "mdi6.help-circle-outline"),
 ]
 
 
@@ -84,8 +85,9 @@ class Sidebar(QWidget):
         root_layout.addSpacing(12)
 
         # ── Nav buttons ────────────────────────────────────────────────
-        for key, label in _NAV_ITEMS:
+        for key, label, icon_name in _NAV_ITEMS:
             btn = QPushButton(label)
+            btn.setIcon(icons.muted(icon_name))
             btn.setObjectName("nav")
             btn.setProperty("active", "false")
             btn.setCursor(Qt.CursorShape.PointingHandCursor)
@@ -119,7 +121,9 @@ class Sidebar(QWidget):
         root_layout.addSpacing(8)
 
         # ── Theme toggle ───────────────────────────────────────────────
-        theme_btn = QPushButton("🌙  Dark mode" if not self._dark else "☀️  Light mode")
+        _tm = icons.MOON if not self._dark else icons.SUN
+        theme_btn = QPushButton("Dark mode" if not self._dark else "Light mode")
+        theme_btn.setIcon(icons.muted(_tm))
         theme_btn.setObjectName("secondary")
         theme_btn.setFixedHeight(30)
         theme_btn.setCursor(Qt.CursorShape.PointingHandCursor)
@@ -135,7 +139,8 @@ class Sidebar(QWidget):
 
     def _on_theme_toggle(self) -> None:
         self._dark = not self._dark
-        self._theme_btn.setText("☀️  Light mode" if self._dark else "🌙  Dark mode")
+        self._theme_btn.setText("Light mode" if self._dark else "Dark mode")
+        self._theme_btn.setIcon(icons.muted(icons.SUN if self._dark else icons.MOON))
         self.theme_toggle_requested.emit()
 
     def set_active(self, key: str) -> None:
@@ -156,4 +161,5 @@ class Sidebar(QWidget):
     def set_dark(self, dark: bool) -> None:
         """Sync the theme button text after an external theme change."""
         self._dark = dark
-        self._theme_btn.setText("☀️  Light mode" if dark else "🌙  Dark mode")
+        self._theme_btn.setText("Light mode" if dark else "Dark mode")
+        self._theme_btn.setIcon(icons.muted(icons.SUN if dark else icons.MOON))

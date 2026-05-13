@@ -27,6 +27,7 @@ from narracast.output_files import (
     list_history_files,
 )
 from narracast.metadata import metadata_path_for_audio
+from narracast.ui import icons
 from narracast.paths import OUTPUT_DIR
 from narracast.ui.widgets import Card, Divider, MutedLabel, SectionLabel
 
@@ -74,7 +75,8 @@ class HistoryPage(QWidget):
         self._search.textChanged.connect(self._on_search)
         top_row.addWidget(self._search, stretch=1)
 
-        refresh_btn = QPushButton("↻  Refresh")
+        refresh_btn = QPushButton("Refresh")
+        refresh_btn.setIcon(icons.icon(icons.REFRESH))
         refresh_btn.setFixedHeight(32)
         refresh_btn.clicked.connect(self._refresh)
         top_row.addWidget(refresh_btn)
@@ -98,21 +100,24 @@ class HistoryPage(QWidget):
 
         # Primary actions
         action_row = QHBoxLayout()
-        self.read_btn = QPushButton("📖  Read + Play")
+        self.read_btn = QPushButton("Read + Play")
+        self.read_btn.setIcon(icons.accent(icons.BOOK_OPEN))
         self.read_btn.setObjectName("primary")
         self.read_btn.setFixedHeight(36)
         self.read_btn.setEnabled(False)
         self.read_btn.clicked.connect(self._open_in_reader)
         action_row.addWidget(self.read_btn)
 
-        self.play_btn = QPushButton("▶  Play (audio only)")
+        self.play_btn = QPushButton("Play (audio only)")
+        self.play_btn.setIcon(icons.icon(icons.HEADPHONES))
         self.play_btn.setObjectName("secondary")
         self.play_btn.setFixedHeight(36)
         self.play_btn.setEnabled(False)
         self.play_btn.clicked.connect(self._play_audio)
         action_row.addWidget(self.play_btn)
 
-        self.reveal_btn = QPushButton("📁  Reveal selected")
+        self.reveal_btn = QPushButton("Reveal")
+        self.reveal_btn.setIcon(icons.icon(icons.REVEAL))
         self.reveal_btn.setFixedHeight(36)
         self.reveal_btn.setEnabled(False)
         self.reveal_btn.clicked.connect(self._reveal_selected)
@@ -131,7 +136,8 @@ class HistoryPage(QWidget):
         danger_row = QHBoxLayout()
         danger_row.addWidget(MutedLabel("Danger zone:"))
 
-        self.delete_btn = QPushButton("🗑  Delete file")
+        self.delete_btn = QPushButton("Delete file")
+        self.delete_btn.setIcon(icons.danger(icons.DELETE))
         self.delete_btn.setObjectName("danger")
         self.delete_btn.setFixedHeight(30)
         self.delete_btn.setEnabled(False)

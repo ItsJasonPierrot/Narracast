@@ -44,6 +44,7 @@ from narracast.voices import get_voice_files, reference_signature, reference_war
 from narracast.ui.benchmark_dialog import BenchmarkDialog
 from narracast.ui.signals import get_signals
 from narracast.ui.timing_dialog import TimingAnalysisDialog
+from narracast.ui import icons
 from narracast.ui.widgets import Card, ChipButton, MutedLabel, SectionLabel, StatusDot
 
 
@@ -299,16 +300,19 @@ class GeneratePage(QWidget):
         self._build_advanced(layout)
 
         # ── Action buttons ───────────────────────────────────────────────
-        self.gen_btn = QPushButton("🎙  Generate MP3")
+        self.gen_btn = QPushButton("Generate MP3")
+        self.gen_btn.setIcon(icons.accent(icons.MICROPHONE))
         self.gen_btn.setObjectName("primary")
         self.gen_btn.setFixedHeight(40)
         self.gen_btn.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
         layout.addWidget(self.gen_btn)
 
         action_row = QHBoxLayout()
-        self.preview_btn = QPushButton("▶  Preview first section")
+        self.preview_btn = QPushButton("Preview first section")
+        self.preview_btn.setIcon(icons.icon(icons.PLAY))
         self.preview_btn.setFixedHeight(36)
-        self.queue_btn = QPushButton("📋  Queue it")
+        self.queue_btn = QPushButton("Queue it")
+        self.queue_btn.setIcon(icons.icon(icons.PLAYLIST_ADD))
         self.queue_btn.setObjectName("secondary")
         self.queue_btn.setFixedHeight(36)
         action_row.addWidget(self.preview_btn, stretch=1)
@@ -320,7 +324,8 @@ class GeneratePage(QWidget):
     def _build_advanced(self, layout: QVBoxLayout) -> None:
         """Collapsible Advanced audio-polish controls."""
         # Toggle button
-        self._adv_toggle = QPushButton("⚙  Advanced  ▶")
+        self._adv_toggle = QPushButton("Advanced")
+        self._adv_toggle.setIcon(icons.muted(icons.COG))
         self._adv_toggle.setObjectName("chip")
         self._adv_toggle.setFixedHeight(28)
         self._adv_toggle.setCheckable(True)
@@ -414,8 +419,12 @@ class GeneratePage(QWidget):
         )
 
     def _on_adv_toggle(self, checked: bool) -> None:
+        from narracast.ui import icons
         self._adv_frame.setVisible(checked)
-        self._adv_toggle.setText("⚙  Advanced  ▼" if checked else "⚙  Advanced  ▶")
+        self._adv_toggle.setText("Advanced")
+        self._adv_toggle.setIcon(
+            icons.muted(icons.CHEVRON_DOWN) if checked else icons.muted(icons.CHEVRON_RIGHT)
+        )
 
     def _current_polish(self) -> AudioPolishSettings:
         """Read current Advanced panel values into an AudioPolishSettings."""
@@ -441,7 +450,8 @@ class GeneratePage(QWidget):
         out_layout.addWidget(self.last_file_label)
 
         play_row = QHBoxLayout()
-        self._play_btn = QPushButton("▶  Play")
+        self._play_btn = QPushButton("Play")
+        self._play_btn.setIcon(icons.icon(icons.PLAY))
         self._play_btn.setEnabled(False)
         self._play_btn.setFixedHeight(30)
         play_row.addWidget(self._play_btn, stretch=1)
@@ -457,7 +467,8 @@ class GeneratePage(QWidget):
         out_layout.addWidget(self._time_label)
 
         dl_row = QHBoxLayout()
-        self._reveal_btn = QPushButton("📁  Reveal")
+        self._reveal_btn = QPushButton("Reveal")
+        self._reveal_btn.setIcon(icons.icon(icons.REVEAL))
         self._reveal_btn.setEnabled(False)
         self._reveal_btn.setFixedHeight(28)
         dl_row.addWidget(self._reveal_btn)

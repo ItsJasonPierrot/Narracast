@@ -33,6 +33,7 @@ from narracast.playback import (
     save_last_position,
     delete_bookmark,
 )
+from narracast.ui import icons
 from narracast.ui.signals import get_signals
 from narracast.ui.widgets import Divider, MutedLabel
 
@@ -123,16 +124,17 @@ class ReadingPage(QWidget):
 
         self._control_buttons: list[QPushButton] = []
         controls = [
-            ("▶ Play", "_play"),
-            ("■ Stop", "_stop"),
-            ("◀ -10s", "_back"),
-            ("+10s ▶", "_forward"),
-            ("↺ Repeat", "_repeat"),
+            ("Play",   "_play",    icons.accent, icons.PLAY),
+            ("Stop",   "_stop",    icons.icon,   icons.STOP),
+            ("-10s",   "_back",    icons.icon,   icons.REWIND_10),
+            ("+10s",   "_forward", icons.icon,   icons.FAST_FORWARD_10),
+            ("Repeat", "_repeat",  icons.icon,   icons.REPEAT),
         ]
-        for label, fn_name in controls:
+        for label, fn_name, icon_fn, icon_name in controls:
             btn = QPushButton(label)
+            btn.setIcon(icon_fn(icon_name))
             btn.setFixedHeight(32)
-            btn.setFixedWidth(80 if len(label) < 7 else 90)
+            btn.setFixedWidth(90)
             btn.clicked.connect(getattr(self, fn_name))
             top_layout.addWidget(btn)
             self._control_buttons.append(btn)
@@ -177,7 +179,8 @@ class ReadingPage(QWidget):
         bm_layout.setContentsMargins(12, 0, 12, 0)
         bm_layout.setSpacing(8)
 
-        self._bm_add_btn = QPushButton("🔖 Add here")
+        self._bm_add_btn = QPushButton("Add here")
+        self._bm_add_btn.setIcon(icons.icon(icons.BOOKMARK_ADD))
         self._bm_add_btn.setFixedHeight(28)
         self._bm_add_btn.clicked.connect(self._add_bookmark)
         bm_layout.addWidget(self._bm_add_btn)
@@ -187,12 +190,14 @@ class ReadingPage(QWidget):
         self._bm_combo.setFixedHeight(28)
         bm_layout.addWidget(self._bm_combo, stretch=1)
 
-        self._bm_jump_btn = QPushButton("⤶ Jump")
+        self._bm_jump_btn = QPushButton("Jump")
+        self._bm_jump_btn.setIcon(icons.icon(icons.BOOKMARK_JUMP))
         self._bm_jump_btn.setFixedHeight(28)
         self._bm_jump_btn.clicked.connect(self._jump_bookmark)
         bm_layout.addWidget(self._bm_jump_btn)
 
-        self._bm_del_btn = QPushButton("✕ Delete")
+        self._bm_del_btn = QPushButton("Delete")
+        self._bm_del_btn.setIcon(icons.danger(icons.BOOKMARK_DEL))
         self._bm_del_btn.setFixedHeight(28)
         self._bm_del_btn.clicked.connect(self._delete_bookmark)
         bm_layout.addWidget(self._bm_del_btn)
@@ -409,10 +414,12 @@ class ReadingPage(QWidget):
             return
         if self._session.is_playing():
             self._session.pause_and_get_position()
-            self._play_btn.setText("▶ Play")
+            self._play_btn.setText("Play")
+            self._play_btn.setIcon(icons.accent(icons.PLAY))
         else:
             self._session.play(from_ms=self._session._offset_ms)
-            self._play_btn.setText("⏸ Pause")
+            self._play_btn.setText("Pause")
+            self._play_btn.setIcon(icons.accent(icons.PAUSE))
             if self._study_mode:
                 self._time_label.setText(
                     f"{_ms_to_time(self._session._offset_ms)} / {_ms_to_time(self._duration_ms)}"
@@ -423,7 +430,8 @@ class ReadingPage(QWidget):
             pos = self._session.pause_and_get_position()
             if self._meta_path:
                 save_last_position(str(self._meta_path), pos)
-        self._play_btn.setText("▶ Play")
+        self._play_btn.setText("Play")
+        self._play_btn.setIcon(icons.accent(icons.PLAY))
 
     def _back(self) -> None:
         if self._session:
@@ -438,7 +446,8 @@ class ReadingPage(QWidget):
             self._session.repeat_chunk(self._highlight_units or self._timeline)
 
     def _on_playback_done(self) -> None:
-        self._play_btn.setText("▶ Play")
+        self._play_btn.setText("Play")
+        self._play_btn.setIcon(icons.accent(icons.PLAY))
 
     # ── Position update ───────────────────────────────────────────────────────
 
@@ -607,7 +616,8 @@ class ReadingPage(QWidget):
         pos = self._session.pause_and_get_position()
         if self._meta_path:
             save_last_position(str(self._meta_path), pos)
-        self._play_btn.setText("▶ Play")
+        self._play_btn.setText("Play")
+        self._play_btn.setIcon(icons.accent(icons.PLAY))
         self._time_label.setText(f"{_ms_to_time(pos)} / {_ms_to_time(self._duration_ms)}  •  {message}")
 
     def _pacing_key(self, item: dict) -> str | None:

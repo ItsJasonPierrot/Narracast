@@ -5,3 +5,4 @@ soundfile
 pdfminer.six
 mutagen
 PySide6
+qtawesome

@@ -28,7 +28,7 @@ class VoiceProfile:
 
     @property
     def label(self) -> str:
-        return f"🎙 {self.display_name}"
+        return self.display_name
 
     @property
     def folder(self) -> Path:
@@ -215,7 +215,7 @@ def delete_voice_profile(profile_id: str) -> bool:
 def get_voice_files():
     result = {}
     if REFERENCE.exists():
-        result["📌 reference.wav (recommended)"] = str(REFERENCE)
+        result["reference.wav (recommended)"] = str(REFERENCE)
     for profile in list_voice_profiles():
         result[profile.label] = profile.ref_audio
     for f in sorted(CLEAN_VOICE.rglob("vocals.wav")):

@@ -31,6 +31,37 @@ def _clean_str(value: Any) -> str:
     return str(value or "").strip()
 
 
+def _clean_int(value: Any, fallback: int = 0) -> int:
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return fallback
+
+
+def _clean_float(value: Any, fallback: float = 0.0) -> float:
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return fallback
+
+
+def _clean_import_source(raw: Any) -> dict[str, Any]:
+    if not isinstance(raw, dict):
+        return {}
+    cleaned = {
+        "import_id": _clean_str(raw.get("import_id")),
+        "kind": _clean_str(raw.get("kind")),
+        "name": _clean_str(raw.get("name")),
+        "path": _clean_str(raw.get("path")),
+        "split_method": _clean_str(raw.get("split_method")),
+        "split_marker": _clean_str(raw.get("split_marker")),
+        "chapter_index": _clean_int(raw.get("chapter_index")),
+        "chapter_count": _clean_int(raw.get("chapter_count")),
+        "imported_at": _clean_float(raw.get("imported_at")),
+    }
+    return {key: value for key, value in cleaned.items() if value not in ("", 0, 0.0)}
+
+
 def _clean_chapter(raw: dict[str, Any]) -> dict[str, Any]:
     created = float(raw.get("created_at") or _now())
     return {
@@ -39,6 +70,7 @@ def _clean_chapter(raw: dict[str, Any]) -> dict[str, Any]:
         "text": _clean_str(raw.get("text")),
         "status": _clean_str(raw.get("status")) or "draft",
         "output_path": _clean_str(raw.get("output_path")),
+        "import_source": _clean_import_source(raw.get("import_source")),
         "created_at": created,
         "updated_at": float(raw.get("updated_at") or created),
     }
@@ -190,6 +222,7 @@ def add_chapter(
     title: str,
     text: str,
     *,
+    import_source: dict[str, Any] | None = None,
     root: Path = PROJECTS_DIR,
 ) -> dict[str, Any] | None:
     """Append a chapter to a project."""
@@ -202,6 +235,7 @@ def add_chapter(
             "title": title,
             "text": text,
             "status": "draft",
+            "import_source": import_source or {},
             "created_at": _now(),
         }
     )

@@ -41,6 +41,18 @@ class ProjectStorageTests(unittest.TestCase):
                 project["id"],
                 "Chapter 1",
                 "In the beginning.",
+                import_source={
+                    "import_id": "import-1",
+                    "kind": "file",
+                    "name": "book.txt",
+                    "path": "/tmp/book.txt",
+                    "split_method": "heading",
+                    "split_marker": "",
+                    "chapter_index": "1",
+                    "chapter_count": 2,
+                    "imported_at": 123.45,
+                    "ignored": "nope",
+                },
                 root=root,
             )
 
@@ -48,6 +60,19 @@ class ProjectStorageTests(unittest.TestCase):
             loaded = projects.load_project(project["id"], root)
             self.assertEqual(len(loaded["chapters"]), 1)
             self.assertEqual(loaded["chapters"][0]["status"], "draft")
+            self.assertEqual(
+                loaded["chapters"][0]["import_source"],
+                {
+                    "import_id": "import-1",
+                    "kind": "file",
+                    "name": "book.txt",
+                    "path": "/tmp/book.txt",
+                    "split_method": "heading",
+                    "chapter_index": 1,
+                    "chapter_count": 2,
+                    "imported_at": 123.45,
+                },
+            )
 
             updated = projects.update_chapter(
                 project["id"],
@@ -83,7 +108,18 @@ class ProjectStorageTests(unittest.TestCase):
             {
                 "title": "",
                 "speed": "1.25",
-                "chapters": [{"title": "", "text": "body"}, "bad"],
+                "chapters": [
+                    {
+                        "title": "",
+                        "text": "body",
+                        "import_source": {
+                            "kind": "paste",
+                            "chapter_index": "bad",
+                            "imported_at": "bad",
+                        },
+                    },
+                    "bad",
+                ],
             }
         )
 
@@ -91,6 +127,7 @@ class ProjectStorageTests(unittest.TestCase):
         self.assertEqual(clean["speed"], 1.25)
         self.assertEqual(len(clean["chapters"]), 1)
         self.assertEqual(clean["chapters"][0]["title"], "Untitled chapter")
+        self.assertEqual(clean["chapters"][0]["import_source"], {"kind": "paste"})
 
     def test_rebuild_sessions_groups_chapters_and_tracks_progress(self):
         with tempfile.TemporaryDirectory() as tmp:

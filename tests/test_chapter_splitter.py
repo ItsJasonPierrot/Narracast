@@ -1,6 +1,6 @@
 import unittest
 
-from narracast.chapter_splitter import split_chapters
+from narracast.chapter_splitter import import_chapters, split_chapters
 
 
 class ChapterSplitterTests(unittest.TestCase):
@@ -30,9 +30,27 @@ class ChapterSplitterTests(unittest.TestCase):
 
         self.assertEqual([c.title for c in chapters], ["One", "Two"])
         self.assertEqual([c.text for c in chapters], ["First text.", "Second text."])
+        self.assertEqual({c.split_method for c in chapters}, {"custom_marker"})
 
     def test_returns_empty_when_no_headings(self):
         self.assertEqual(split_chapters("Just one plain block."), [])
+
+    def test_import_chapters_falls_back_to_single_draft(self):
+        chapters = import_chapters(
+            "Just one plain block.",
+            fallback_title="Whole book",
+        )
+
+        self.assertEqual(len(chapters), 1)
+        self.assertEqual(chapters[0].title, "Whole book")
+        self.assertEqual(chapters[0].text, "Just one plain block.")
+        self.assertEqual(chapters[0].split_method, "fallback")
+
+    def test_import_chapters_prefers_detected_chapters(self):
+        chapters = import_chapters("Chapter 1\nText.", fallback_title="Whole book")
+
+        self.assertEqual([c.title for c in chapters], ["Chapter 1"])
+        self.assertEqual(chapters[0].split_method, "heading")
 
 
 if __name__ == "__main__":

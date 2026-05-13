@@ -19,6 +19,24 @@ _CHAPTER_RE = re.compile(
 class ChapterDraft:
     title: str
     text: str
+    split_method: str = "heading"
+
+
+def import_chapters(
+    text: str,
+    *,
+    custom_marker: str = "",
+    fallback_title: str = "Imported text",
+) -> list[ChapterDraft]:
+    """Split imported text, falling back to one draft when no headings are found."""
+    source = text.strip()
+    if not source:
+        return []
+    chapters = split_chapters(source, custom_marker=custom_marker)
+    if chapters:
+        return chapters
+    title = fallback_title.strip() or "Imported text"
+    return [ChapterDraft(title=title, text=source, split_method="fallback")]
 
 
 def _is_heading(line: str) -> bool:
@@ -55,6 +73,7 @@ def split_chapters(text: str, custom_marker: str = "") -> list[ChapterDraft]:
                     ChapterDraft(
                         title=current_title or f"Part {len(chapters) + 1}",
                         text="\n".join(current_lines).strip(),
+                        split_method="heading",
                     )
                 )
             current_title = _heading_title(line)
@@ -67,6 +86,7 @@ def split_chapters(text: str, custom_marker: str = "") -> list[ChapterDraft]:
             ChapterDraft(
                 title=current_title,
                 text="\n".join(current_lines).strip(),
+                split_method="heading",
             )
         )
 
@@ -83,5 +103,7 @@ def _split_by_marker(text: str, marker: str) -> list[ChapterDraft]:
         first = lines[0].strip() if lines else ""
         title = first if first and len(first) <= 100 else f"Part {len(chapters) + 1}"
         body = "\n".join(lines[1:]).strip() if first == title else part
-        chapters.append(ChapterDraft(title=title, text=body or part))
+        chapters.append(
+            ChapterDraft(title=title, text=body or part, split_method="custom_marker")
+        )
     return chapters

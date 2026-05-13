@@ -3,11 +3,14 @@
 from __future__ import annotations
 
 import subprocess
+import time
+import uuid
 from pathlib import Path
 
 from PySide6.QtCore import Qt, Signal
 from PySide6.QtWidgets import (
     QComboBox,
+    QFileDialog,
     QFormLayout,
     QHBoxLayout,
     QLabel,
@@ -22,7 +25,8 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from narracast.chapter_splitter import split_chapters
+from narracast.chapter_splitter import import_chapters
+from narracast.output_files import load_file
 from narracast.projects import (
     add_chapter,
     create_project,
@@ -43,6 +47,7 @@ from narracast.projects import (
     update_session,
 )
 from narracast.queue_manager import add_to_queue
+from narracast.ui import icons
 from narracast.voices import get_voice_files
 from narracast.ui.widgets import Card, MutedLabel, SectionLabel
 
@@ -177,7 +182,12 @@ class ProjectsPage(QWidget):
         self.split_marker_edit = QLineEdit()
         self.split_marker_edit.setPlaceholderText("Optional custom split marker")
         split_row.addWidget(self.split_marker_edit, stretch=1)
-        self.split_chapters_btn = QPushButton("Split pasted text")
+        self.import_file_btn = QPushButton("Import file")
+        self.import_file_btn.setIcon(icons.icon(icons.IMPORT_FILE))
+        self.import_file_btn.clicked.connect(self._import_text_file)
+        split_row.addWidget(self.import_file_btn)
+        self.split_chapters_btn = QPushButton("Import pasted text")
+        self.split_chapters_btn.setIcon(icons.icon(icons.SCISSORS))
         self.split_chapters_btn.clicked.connect(self._split_pasted_text)
         split_row.addWidget(self.split_chapters_btn)
         chapter_layout.addLayout(split_row)
@@ -537,22 +547,92 @@ class ProjectsPage(QWidget):
     def _split_pasted_text(self) -> None:
         if not self._current_project:
             return
-        drafts = split_chapters(
+        fallback_title = self.chapter_title_edit.text() or self._current_project["title"]
+        self._import_text_as_chapters(
             self.chapter_text_edit.toPlainText(),
-            custom_marker=self.split_marker_edit.text(),
+            fallback_title=fallback_title,
+            source_kind="paste",
+            source_name=fallback_title,
+        )
+
+    def _import_text_file(self) -> None:
+        if not self._current_project:
+            return
+        path, _filter = QFileDialog.getOpenFileName(
+            self,
+            "Import text into project",
+            "",
+            "Text and PDF files (*.txt *.pdf)",
+        )
+        if not path:
+            return
+        text = load_file(path)
+        if text.startswith("⚠️"):
+            self.status_label.setText(text)
+            return
+        fallback_title = Path(path).stem or self._current_project["title"]
+        self._import_text_as_chapters(
+            text,
+            fallback_title=fallback_title,
+            source_kind="file",
+            source_name=Path(path).name,
+            source_path=path,
+        )
+
+    def _import_text_as_chapters(
+        self,
+        text: str,
+        *,
+        fallback_title: str,
+        source_kind: str = "paste",
+        source_name: str = "",
+        source_path: str = "",
+    ) -> None:
+        if not self._current_project:
+            return
+        split_marker = self.split_marker_edit.text()
+        drafts = import_chapters(
+            text,
+            custom_marker=split_marker,
+            fallback_title=fallback_title,
         )
         if not drafts:
-            self.status_label.setText("No chapter headings or split markers found.")
+            self.status_label.setText("No importable text found.")
             return
         project_id = self._current_project["id"]
-        for draft in drafts:
-            add_chapter(project_id, draft.title, draft.text)
-        self.status_label.setText(
-            f"Added {len(drafts)} chapter{'s' if len(drafts) != 1 else ''} for review."
-        )
+        import_id = uuid.uuid4().hex[:10]
+        imported_at = time.time()
+        source_label = source_name.strip() or fallback_title
+        for index, draft in enumerate(drafts, start=1):
+            add_chapter(
+                project_id,
+                draft.title,
+                draft.text,
+                import_source={
+                    "import_id": import_id,
+                    "kind": source_kind,
+                    "name": source_label,
+                    "path": source_path,
+                    "split_method": draft.split_method,
+                    "split_marker": split_marker,
+                    "chapter_index": index,
+                    "chapter_count": len(drafts),
+                    "imported_at": imported_at,
+                },
+            )
+        sessions = rebuild_sessions(project_id)
         self.chapter_title_edit.clear()
         self.chapter_text_edit.clear()
         self._load_project(project_id)
+        session_note = (
+            f" Built {len(sessions)} session{'s' if len(sessions) != 1 else ''}."
+            if sessions
+            else ""
+        )
+        self.status_label.setText(
+            f"Imported {len(drafts)} draft chapter{'s' if len(drafts) != 1 else ''} for review."
+            f"{session_note}"
+        )
 
     def _queue_all_drafts(self) -> None:
         if not self._current_project:
@@ -704,6 +784,7 @@ class ProjectsPage(QWidget):
             self.chapter_title_edit,
             self.chapter_text_edit,
             self.split_marker_edit,
+            self.import_file_btn,
             self.split_chapters_btn,
             self.add_chapter_btn,
             self.queue_all_btn,

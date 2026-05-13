@@ -46,7 +46,8 @@ class Sidebar(QWidget):
         self._nav_buttons: dict[str, QPushButton] = {}
         self._device_label: MutedLabel | None = None
 
-        self.setFixedWidth(220)
+        self.setMinimumWidth(172)
+        self.setMaximumWidth(220)
         self.setObjectName("sidebar")
         self.setStyleSheet("QWidget#sidebar { background: #0a111b; border-right: 1px solid #1a2a3a; }")
 

@@ -121,15 +121,16 @@ class GeneratePage(QWidget):
 
         left_widget = QWidget()
         left_layout = QVBoxLayout(left_widget)
-        left_layout.setContentsMargins(24, 24, 16, 24)
-        left_layout.setSpacing(16)
+        left_layout.setContentsMargins(16, 18, 12, 18)
+        left_layout.setSpacing(12)
         left_layout.setAlignment(Qt.AlignmentFlag.AlignTop)
         scroll.setWidget(left_widget)
         root.addWidget(scroll, stretch=1)
 
-        # Right rail (fixed 280px)
+        # Right rail
         right_widget = QWidget()
-        right_widget.setFixedWidth(280)
+        right_widget.setMinimumWidth(220)
+        right_widget.setMaximumWidth(280)
         right_widget.setStyleSheet("background: #0a111b; border-left: 1px solid #1a2a3a;")
         right_layout = QVBoxLayout(right_widget)
         right_layout.setContentsMargins(12, 20, 12, 20)
@@ -161,7 +162,7 @@ class GeneratePage(QWidget):
 
         self.text_edit = FileDropTextEdit()
         self.text_edit.setPlaceholderText("Enter or paste your text here…")
-        self.text_edit.setMinimumHeight(260)
+        self.text_edit.setMinimumHeight(180)
         self.text_edit.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
         text_card_layout.addWidget(self.text_edit)
 

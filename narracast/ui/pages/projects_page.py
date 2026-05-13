@@ -17,6 +17,7 @@ from PySide6.QtWidgets import (
     QLineEdit,
     QPushButton,
     QSizePolicy,
+    QScrollArea,
     QSplitter,
     QTextEdit,
     QTreeWidget,
@@ -71,8 +72,8 @@ class ProjectsPage(QWidget):
 
     def _build_ui(self) -> None:
         root = QVBoxLayout(self)
-        root.setContentsMargins(24, 24, 24, 24)
-        root.setSpacing(16)
+        root.setContentsMargins(16, 18, 16, 18)
+        root.setSpacing(12)
 
         h2 = QLabel("Projects")
         h2.setObjectName("h2")
@@ -80,7 +81,7 @@ class ProjectsPage(QWidget):
         root.addWidget(MutedLabel("Organize long books, chapters, and queued generation."))
 
         splitter = QSplitter(Qt.Orientation.Horizontal)
-        splitter.setChildrenCollapsible(False)
+        splitter.setChildrenCollapsible(True)
         root.addWidget(splitter, stretch=1)
 
         # Left: project list
@@ -94,7 +95,7 @@ class ProjectsPage(QWidget):
         self.project_tree.setColumnCount(3)
         self.project_tree.setHeaderLabels(["Project", "Chapters", "Updated"])
         self.project_tree.setRootIsDecorated(False)
-        self.project_tree.setMinimumWidth(320)
+        self.project_tree.setMinimumWidth(180)
         self.project_tree.itemSelectionChanged.connect(self._on_project_selection)
         left_layout.addWidget(self.project_tree, stretch=1)
 
@@ -110,9 +111,14 @@ class ProjectsPage(QWidget):
         splitter.addWidget(left)
 
         # Right: project details + chapters
+        right_scroll = QScrollArea()
+        right_scroll.setWidgetResizable(True)
+        right_scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        right_scroll.setFrameShape(QScrollArea.Shape.NoFrame)
+
         right = QWidget()
         right_layout = QVBoxLayout(right)
-        right_layout.setContentsMargins(12, 0, 0, 0)
+        right_layout.setContentsMargins(8, 0, 0, 0)
         right_layout.setSpacing(12)
 
         details = Card()
@@ -177,7 +183,7 @@ class ProjectsPage(QWidget):
 
         self.chapter_text_edit = QTextEdit()
         self.chapter_text_edit.setPlaceholderText("Chapter text")
-        self.chapter_text_edit.setMinimumHeight(160)
+        self.chapter_text_edit.setMinimumHeight(120)
         chapter_layout.addWidget(self.chapter_text_edit, stretch=1)
 
         split_row = QHBoxLayout()
@@ -214,12 +220,16 @@ class ProjectsPage(QWidget):
             self.update_chapter_btn,
             self.delete_chapter_btn,
             self.queue_chapter_btn,
-            self.queue_all_btn,
-            self.regenerate_btn,
         ]:
             chapter_btns.addWidget(btn)
         chapter_btns.addStretch()
         chapter_layout.addLayout(chapter_btns)
+
+        chapter_btns_2 = QHBoxLayout()
+        for btn in [self.queue_all_btn, self.regenerate_btn]:
+            chapter_btns_2.addWidget(btn)
+        chapter_btns_2.addStretch()
+        chapter_layout.addLayout(chapter_btns_2)
 
         output_btns = QHBoxLayout()
         self.read_output_btn = QPushButton("Read + Play")
@@ -275,19 +285,27 @@ class ProjectsPage(QWidget):
             self.split_session_btn,
             self.merge_session_btn,
             self.complete_session_btn,
-            self.resume_session_btn,
-            self.read_session_btn,
-            self.export_m4b_btn,
         ]:
             session_btns.addWidget(btn)
         session_btns.addStretch()
         chapter_layout.addLayout(session_btns)
 
+        session_btns_2 = QHBoxLayout()
+        for btn in [
+            self.resume_session_btn,
+            self.read_session_btn,
+            self.export_m4b_btn,
+        ]:
+            session_btns_2.addWidget(btn)
+        session_btns_2.addStretch()
+        chapter_layout.addLayout(session_btns_2)
+
         self.status_label = MutedLabel("")
         chapter_layout.addWidget(self.status_label)
         right_layout.addWidget(chapter_card, stretch=1)
 
-        splitter.addWidget(right)
+        right_scroll.setWidget(right)
+        splitter.addWidget(right_scroll)
         splitter.setStretchFactor(0, 1)
         splitter.setStretchFactor(1, 2)
 

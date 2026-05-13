@@ -121,14 +121,14 @@ class ReadingPage(QWidget):
         top_bar.setStyleSheet("background: #101a27; border-bottom: 1px solid #1a2a3a;")
         top_layout = QHBoxLayout(top_bar)
         top_layout.setContentsMargins(12, 0, 12, 0)
-        top_layout.setSpacing(8)
+        top_layout.setSpacing(4)
 
         self._control_buttons: list[QPushButton] = []
         controls = [
-            ("Play / Resume", "_play",    icons.accent, icons.PLAY),
+            ("Play",          "_play",    icons.accent, icons.PLAY),
             ("Stop",          "_stop",    icons.icon,   icons.STOP),
-            ("-10s",          "_back",    icons.icon,   icons.REWIND_10),
-            ("+10s",          "_forward", icons.icon,   icons.FAST_FORWARD_10),
+            ("-10",           "_back",    icons.icon,   icons.REWIND_10),
+            ("+10",           "_forward", icons.icon,   icons.FAST_FORWARD_10),
             ("Repeat",        "_repeat",  icons.icon,   icons.REPEAT),
         ]
         for label, fn_name, icon_fn, icon_name in controls:
@@ -136,9 +136,9 @@ class ReadingPage(QWidget):
             btn.setIcon(icon_fn(icon_name))
             btn.setFixedHeight(32)
             if fn_name == "_play":
-                btn.setFixedWidth(120)
+                btn.setFixedWidth(86)
             else:
-                btn.setFixedWidth(80)
+                btn.setFixedWidth(58)
             btn.clicked.connect(getattr(self, fn_name))
             top_layout.addWidget(btn)
             self._control_buttons.append(btn)
@@ -156,9 +156,10 @@ class ReadingPage(QWidget):
         top_layout.addStretch()
 
         # Focus mode toggle
-        self._focus_btn = QPushButton("Focus Mode")
+        self._focus_btn = QPushButton("Focus")
         self._focus_btn.setObjectName("secondary")
         self._focus_btn.setFixedHeight(32)
+        self._focus_btn.setFixedWidth(78)
         self._focus_btn.setCheckable(True)
         self._focus_btn.toggled.connect(self._toggle_focus_mode)
         top_layout.addWidget(self._focus_btn)
@@ -169,18 +170,19 @@ class ReadingPage(QWidget):
         self._size_btns: dict[str, QPushButton] = {}
         for size in ["S", "M", "L", "XL"]:
             btn = QPushButton(size)
-            btn.setFixedSize(32, 32)
+            btn.setFixedSize(28, 32)
             btn.clicked.connect(lambda checked=False, s=size: self._set_font_size(s))
             top_layout.addWidget(btn)
             self._size_btns[size] = btn
 
-        top_layout.addSpacing(12)
+        top_layout.addSpacing(4)
 
         # Session: next-chapter button (hidden until a session queue is active)
-        self._next_btn = QPushButton("Next chapter")
+        self._next_btn = QPushButton("Next")
         self._next_btn.setIcon(icons.icon(icons.CHEVRON_RIGHT))
         self._next_btn.setObjectName("primary")
         self._next_btn.setFixedHeight(32)
+        self._next_btn.setFixedWidth(76)
         self._next_btn.setVisible(False)
         self._next_btn.clicked.connect(self._advance_session)
         top_layout.addWidget(self._next_btn)
@@ -220,45 +222,54 @@ class ReadingPage(QWidget):
 
         # ── Display bar ───────────────────────────────────────────────────
         disp_bar = QWidget()
-        disp_bar.setFixedHeight(40)
+        disp_bar.setFixedHeight(68)
         disp_bar.setStyleSheet("background: #0f1724; border-bottom: 1px solid #1a2a3a;")
-        disp_layout = QHBoxLayout(disp_bar)
-        disp_layout.setContentsMargins(12, 0, 12, 0)
-        disp_layout.setSpacing(12)
+        disp_layout = QVBoxLayout(disp_bar)
+        disp_layout.setContentsMargins(12, 6, 12, 6)
+        disp_layout.setSpacing(4)
 
-        disp_layout.addWidget(MutedLabel("Theme"))
+        display_row = QHBoxLayout()
+        display_row.setSpacing(8)
+
+        display_row.addWidget(MutedLabel("Theme"))
         self._theme_combo = QComboBox()
         self._theme_combo.addItems(list(_DISPLAY_THEMES.keys()))
         self._theme_combo.setCurrentText("Night")
         self._theme_combo.setFixedHeight(28)
         self._theme_combo.currentTextChanged.connect(self._apply_display_theme)
-        disp_layout.addWidget(self._theme_combo)
+        display_row.addWidget(self._theme_combo)
 
-        disp_layout.addWidget(MutedLabel("Spacing"))
+        display_row.addWidget(MutedLabel("Spacing"))
         self._spacing_combo = QComboBox()
         self._spacing_combo.addItems(list(_SPACING_VALS.keys()))
         self._spacing_combo.setCurrentText("Normal")
         self._spacing_combo.setFixedHeight(28)
         self._spacing_combo.currentTextChanged.connect(self._apply_text_spacing)
-        disp_layout.addWidget(self._spacing_combo)
+        display_row.addWidget(self._spacing_combo)
 
-        disp_layout.addWidget(MutedLabel("Font"))
+        display_row.addWidget(MutedLabel("Font"))
         self._font_combo = QComboBox()
         self._font_combo.addItems(["Georgia", "Inter", "Courier New", "Times New Roman"])
         self._font_combo.setCurrentText("Georgia")
         self._font_combo.setFixedHeight(28)
         self._font_combo.currentTextChanged.connect(self._apply_display_font)
-        disp_layout.addWidget(self._font_combo)
+        display_row.addWidget(self._font_combo)
+        display_row.addStretch()
+        disp_layout.addLayout(display_row)
+
+        pacing_row = QHBoxLayout()
+        pacing_row.setSpacing(8)
 
         self._auto_pause_check = QCheckBox("Pause after paragraph")
         self._auto_pause_check.toggled.connect(self._set_auto_pause_paragraphs)
-        disp_layout.addWidget(self._auto_pause_check)
+        pacing_row.addWidget(self._auto_pause_check)
 
         self._study_mode_check = QCheckBox("Study mode")
         self._study_mode_check.toggled.connect(self._set_study_mode)
-        disp_layout.addWidget(self._study_mode_check)
+        pacing_row.addWidget(self._study_mode_check)
 
-        disp_layout.addStretch()
+        pacing_row.addStretch()
+        disp_layout.addLayout(pacing_row)
         root.addWidget(disp_bar)
 
         # ── Main content area ──────────────────────────────────────────────

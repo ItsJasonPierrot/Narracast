@@ -16,6 +16,7 @@ from PySide6.QtWidgets import (
     QLineEdit,
     QMessageBox,
     QPushButton,
+    QScrollArea,
     QSizePolicy,
     QSpinBox,
     QTextEdit,
@@ -57,9 +58,22 @@ class VoicePage(QWidget):
     # ── Build UI ──────────────────────────────────────────────────────────
 
     def _build_ui(self) -> None:
-        root = QVBoxLayout(self)
-        root.setContentsMargins(24, 24, 24, 24)
-        root.setSpacing(16)
+        shell = QVBoxLayout(self)
+        shell.setContentsMargins(0, 0, 0, 0)
+        shell.setSpacing(0)
+
+        scroll = QScrollArea()
+        scroll.setWidgetResizable(True)
+        scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        scroll.setFrameShape(QScrollArea.Shape.NoFrame)
+        shell.addWidget(scroll)
+
+        content = QWidget()
+        scroll.setWidget(content)
+
+        root = QVBoxLayout(content)
+        root.setContentsMargins(16, 18, 16, 18)
+        root.setSpacing(12)
         root.setAlignment(Qt.AlignmentFlag.AlignTop)
 
         # Header
@@ -75,7 +89,7 @@ class VoicePage(QWidget):
 
         library_card = Card()
         library_layout = QVBoxLayout(library_card)
-        library_layout.setContentsMargins(20, 18, 20, 18)
+        library_layout.setContentsMargins(16, 14, 16, 14)
         library_layout.setSpacing(10)
         library_layout.addWidget(SectionLabel("Saved voices"))
 
@@ -132,8 +146,8 @@ class VoicePage(QWidget):
         # Main card
         card = Card()
         card_layout = QVBoxLayout(card)
-        card_layout.setContentsMargins(20, 18, 20, 18)
-        card_layout.setSpacing(14)
+        card_layout.setContentsMargins(16, 14, 16, 14)
+        card_layout.setSpacing(12)
         root.addWidget(card)
 
         # Source section
@@ -255,7 +269,7 @@ class VoicePage(QWidget):
         self.stop_btn.clicked.connect(self._stop_preview)
         btn_row.addWidget(self.stop_btn)
 
-        self.save_btn = QPushButton("Save as reference.wav")
+        self.save_btn = QPushButton("Save reference")
         self.save_btn.setIcon(icons.accent(icons.SAVE))
         self.save_btn.setObjectName("primary")
         self.save_btn.setFixedHeight(34)

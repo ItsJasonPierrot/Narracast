@@ -460,6 +460,44 @@ def refresh_project_outputs(project_id: str, root: Path = PROJECTS_DIR) -> dict[
     return save_project(project, root=root) if changed else project
 
 
+def project_summary(project: dict[str, Any]) -> dict[str, Any]:
+    """Return status counts, estimated remaining duration, and a next-action hint."""
+    chapters = project.get("chapters", [])
+    counts: dict[str, int] = {}
+    remaining_s = 0
+    for chapter in chapters:
+        status = chapter.get("status", "draft")
+        counts[status] = counts.get(status, 0) + 1
+        if status not in ("generated", "queued"):
+            remaining_s += estimate_chapter_duration_s(chapter)
+
+    total = len(chapters)
+    generated = counts.get("generated", 0)
+    queued = counts.get("queued", 0)
+    drafts = counts.get("draft", 0)
+    errors = counts.get("error", 0)
+
+    if total == 0:
+        next_action = "Add chapters to get started."
+    elif errors:
+        next_action = f"{errors} chapter{'s' if errors != 1 else ''} failed — retry from the Queue."
+    elif drafts:
+        next_action = f"{drafts} chapter{'s' if drafts != 1 else ''} ready to queue."
+    elif queued:
+        next_action = f"{queued} chapter{'s' if queued != 1 else ''} generating — check the Queue tab."
+    elif generated == total:
+        next_action = "All chapters generated. Build sessions to start reading."
+    else:
+        next_action = "Refresh output status to check for missing files."
+
+    return {
+        "total": total,
+        "counts": counts,
+        "estimated_remaining_s": remaining_s,
+        "next_action": next_action,
+    }
+
+
 def mark_chapter_queued(project_id: str, chapter_id: str, root: Path = PROJECTS_DIR) -> None:
     update_chapter(project_id, chapter_id, status="queued", root=root)
 

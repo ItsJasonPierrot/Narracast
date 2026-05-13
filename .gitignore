@@ -29,6 +29,8 @@ raw_audio/
 clean_voice/
 voices/*
 !voices/.gitkeep
+projects/*
+!projects/.gitkeep
 
 # macOS
 .DS_Store

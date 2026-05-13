@@ -33,6 +33,7 @@ from narracast.projects import (
     mark_session_complete,
     merge_session_with_next,
     next_unfinished_session,
+    project_summary,
     rebuild_sessions,
     refresh_project_outputs,
     session_progress,
@@ -148,6 +149,9 @@ class ProjectsPage(QWidget):
         chapter_layout.setContentsMargins(16, 16, 16, 16)
         chapter_layout.setSpacing(10)
         chapter_layout.addWidget(SectionLabel("Chapters"))
+        self._summary_label = MutedLabel("")
+        self._summary_label.setWordWrap(True)
+        chapter_layout.addWidget(self._summary_label)
 
         self.chapter_tree = QTreeWidget()
         self.chapter_tree.setColumnCount(4)
@@ -318,6 +322,7 @@ class ProjectsPage(QWidget):
         self.speed_combo.setCurrentText(f"{float(self._current_project.get('speed', 1.0)):.2f}")
         self._populate_chapters()
         self._populate_sessions()
+        self._update_summary()
 
     def _populate_chapters(self) -> None:
         self.chapter_tree.clear()
@@ -325,9 +330,15 @@ class ProjectsPage(QWidget):
             return
         for chapter in self._current_project["chapters"]:
             words = len(chapter.get("text", "").split())
-            output = "yes" if chapter.get("output_path") else ""
+            output_path = chapter.get("output_path", "")
+            if not output_path:
+                output_indicator = ""
+            elif Path(output_path).exists():
+                output_indicator = "✓"
+            else:
+                output_indicator = "✗ missing"
             item = QTreeWidgetItem(
-                [chapter["title"], chapter["status"], str(words), output]
+                [chapter["title"], chapter["status"], str(words), output_indicator]
             )
             item.setData(0, Qt.ItemDataRole.UserRole, chapter["id"])
             self.chapter_tree.addTopLevelItem(item)
@@ -348,15 +359,66 @@ class ProjectsPage(QWidget):
         chapter = self._selected_chapter()
         if not chapter:
             self._current_chapter_id = ""
-            return
-        self._current_chapter_id = chapter["id"]
-        self.chapter_title_edit.setText(chapter["title"])
-        self.chapter_text_edit.setPlainText(chapter["text"])
+        else:
+            self._current_chapter_id = chapter["id"]
+            self.chapter_title_edit.setText(chapter["title"])
+            self.chapter_text_edit.setPlainText(chapter["text"])
+        self._update_chapter_action_buttons()
 
     def _on_session_selection(self) -> None:
         session = self._selected_session()
         if session:
             self.session_title_edit.setText(session["title"])
+        self._update_session_action_buttons()
+
+    def _update_chapter_action_buttons(self) -> None:
+        chapter = self._selected_chapter()
+        has_chapter = chapter is not None
+        has_output = (
+            has_chapter
+            and bool(chapter.get("output_path"))
+            and Path(chapter["output_path"]).exists()
+        )
+        for btn in [
+            self.update_chapter_btn,
+            self.delete_chapter_btn,
+            self.queue_chapter_btn,
+            self.regenerate_btn,
+        ]:
+            btn.setEnabled(has_chapter)
+        for btn in [self.read_output_btn, self.reveal_output_btn]:
+            btn.setEnabled(has_output)
+
+    def _update_session_action_buttons(self) -> None:
+        has_session = self._selected_session() is not None
+        for btn in [
+            self.rename_session_btn,
+            self.split_session_btn,
+            self.merge_session_btn,
+            self.complete_session_btn,
+        ]:
+            btn.setEnabled(has_session)
+
+    def _update_summary(self) -> None:
+        if not self._current_project:
+            self._summary_label.setText("")
+            return
+        summary = project_summary(self._current_project)
+        if summary["total"] == 0:
+            self._summary_label.setText(summary["next_action"])
+            return
+        counts = summary["counts"]
+        parts = [f"{summary['total']} chapter{'s' if summary['total'] != 1 else ''}"]
+        for status in ("generated", "queued", "error", "missing", "draft"):
+            n = counts.get(status, 0)
+            if n:
+                parts.append(f"{n} {status}")
+        remaining = summary["estimated_remaining_s"]
+        if remaining:
+            parts.append(f"~{self._format_duration(remaining)} remaining")
+        self._summary_label.setText(" · ".join(parts))
+        if summary["next_action"]:
+            self.status_label.setText(summary["next_action"])
 
     # ── Project actions ───────────────────────────────────────────────────
 
@@ -644,29 +706,32 @@ class ProjectsPage(QWidget):
             self.split_marker_edit,
             self.split_chapters_btn,
             self.add_chapter_btn,
-            self.update_chapter_btn,
-            self.delete_chapter_btn,
-            self.queue_chapter_btn,
             self.queue_all_btn,
-            self.regenerate_btn,
-            self.read_output_btn,
-            self.reveal_output_btn,
             self.refresh_outputs_btn,
             self.session_title_edit,
             self.session_tree,
             self.build_sessions_btn,
-            self.rename_session_btn,
-            self.split_session_btn,
-            self.merge_session_btn,
-            self.complete_session_btn,
             self.resume_session_btn,
         ]:
             widget.setEnabled(enabled)
+        if not enabled:
+            self._summary_label.setText("")
+        # Chapter- and session-specific buttons depend on selection state
+        self._update_chapter_action_buttons()
+        self._update_session_action_buttons()
 
     def _format_time(self, value) -> str:
         try:
             from datetime import datetime
-
             return datetime.fromtimestamp(float(value)).strftime("%Y-%m-%d")
         except Exception:
             return ""
+
+    def _format_duration(self, seconds: int) -> str:
+        if seconds < 60:
+            return f"{seconds}s"
+        minutes = seconds // 60
+        if minutes < 60:
+            return f"{minutes} min"
+        hours, mins = divmod(minutes, 60)
+        return f"{hours}h {mins}m" if mins else f"{hours}h"

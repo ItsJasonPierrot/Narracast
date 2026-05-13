@@ -193,5 +193,65 @@ class ProjectStorageTests(unittest.TestCase):
             self.assertEqual(chapters[second["id"]]["status"], "missing")
 
 
+class ProjectSummaryTests(unittest.TestCase):
+    def test_empty_project_has_zero_totals(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            project = projects.create_project("Empty", root=Path(tmp))
+            summary = projects.project_summary(project)
+            self.assertEqual(summary["total"], 0)
+            self.assertEqual(summary["counts"], {})
+            self.assertEqual(summary["estimated_remaining_s"], 0)
+
+    def test_counts_chapters_by_status(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            project = projects.create_project("Book", root=root)
+            ch1 = projects.add_chapter(project["id"], "One", "word " * 50, root=root)
+            ch2 = projects.add_chapter(project["id"], "Two", "word " * 50, root=root)
+            ch3 = projects.add_chapter(project["id"], "Three", "word " * 50, root=root)
+            projects.update_chapter(project["id"], ch3["id"], status="generated", root=root)
+            projects.update_chapter(project["id"], ch2["id"], status="queued", root=root)
+            loaded = projects.load_project(project["id"], root)
+            summary = projects.project_summary(loaded)
+            self.assertEqual(summary["total"], 3)
+            self.assertEqual(summary["counts"]["draft"], 1)
+            self.assertEqual(summary["counts"]["queued"], 1)
+            self.assertEqual(summary["counts"]["generated"], 1)
+
+    def test_estimated_remaining_excludes_generated_and_queued(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            project = projects.create_project("Book", root=root)
+            ch1 = projects.add_chapter(project["id"], "Draft", "word " * 300, root=root)
+            ch2 = projects.add_chapter(project["id"], "Done", "word " * 300, root=root)
+            projects.update_chapter(project["id"], ch2["id"], status="generated", root=root)
+            loaded = projects.load_project(project["id"], root)
+            summary = projects.project_summary(loaded)
+            # Only the draft chapter contributes to remaining estimate
+            draft_only = projects.estimate_chapter_duration_s(
+                next(c for c in loaded["chapters"] if c["id"] == ch1["id"])
+            )
+            self.assertEqual(summary["estimated_remaining_s"], draft_only)
+
+    def test_next_action_when_all_generated(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            project = projects.create_project("Book", root=root)
+            ch = projects.add_chapter(project["id"], "One", "text", root=root)
+            projects.update_chapter(project["id"], ch["id"], status="generated", root=root)
+            loaded = projects.load_project(project["id"], root)
+            summary = projects.project_summary(loaded)
+            self.assertIn("generated", summary["next_action"].lower())
+
+    def test_next_action_suggests_queue_when_drafts_remain(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            project = projects.create_project("Book", root=root)
+            projects.add_chapter(project["id"], "One", "text", root=root)
+            loaded = projects.load_project(project["id"], root)
+            summary = projects.project_summary(loaded)
+            self.assertIn("queue", summary["next_action"].lower())
+
+
 if __name__ == "__main__":
     unittest.main()

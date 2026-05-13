@@ -25,7 +25,7 @@ class SectionLabel(QLabel):
     """Small uppercase section heading label."""
 
     def __init__(self, text: str = "", parent: QWidget | None = None) -> None:
-        super().__init__(text, parent)
+        super().__init__(text.upper(), parent)
         self.setObjectName("section")
 
 
@@ -79,10 +79,12 @@ class StatusDot(QWidget):
 
 
 class Divider(QFrame):
-    """Thin horizontal line divider."""
+    """Thin horizontal line divider. Color comes from QSS via the 'divider' object name."""
 
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
+        self.setObjectName("divider")
         self.setFrameShape(QFrame.Shape.HLine)
         self.setFrameShadow(QFrame.Shadow.Sunken)
-        self.setStyleSheet("background: #1a2a3a; border: none; max-height: 1px; margin: 4px 0;")
+        self.setMaximumHeight(1)
+        self.setContentsMargins(0, 4, 0, 4)

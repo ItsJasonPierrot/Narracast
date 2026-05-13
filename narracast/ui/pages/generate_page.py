@@ -127,10 +127,10 @@ class GeneratePage(QWidget):
         scroll.setWidget(left_widget)
         root.addWidget(scroll, stretch=1)
 
-        # Right rail (fixed 280px)
+        # Right rail (fixed 280px) — background/border come from QSS via right_rail object name
         right_widget = QWidget()
+        right_widget.setObjectName("right_rail")
         right_widget.setFixedWidth(280)
-        right_widget.setStyleSheet("background: #0a111b; border-left: 1px solid #1a2a3a;")
         right_layout = QVBoxLayout(right_widget)
         right_layout.setContentsMargins(12, 20, 12, 20)
         right_layout.setSpacing(12)
@@ -472,6 +472,8 @@ class GeneratePage(QWidget):
         self._reveal_btn.setEnabled(False)
         self._reveal_btn.setFixedHeight(28)
         dl_row.addWidget(self._reveal_btn)
+        dl_row.addStretch()
+        out_layout.addLayout(dl_row)
         layout.addWidget(out_card)
 
         # ── Current job card ─────────────────────────────────────────────
@@ -794,7 +796,7 @@ class GeneratePage(QWidget):
         self._last_output_path = output_path
         filename = Path(output_path).name
         self.last_file_label.setText(filename)
-        self.last_file_label.setStyleSheet("color: #e9f1ff;")
+        self.last_file_label.setStyleSheet("")
         self.job_title_label.setText("Done!")
         self.job_desc_label.setText(message)
         self.progress_bar.setValue(100)
@@ -806,7 +808,7 @@ class GeneratePage(QWidget):
         self._last_output_path = output_path
         filename = Path(output_path).name
         self.last_file_label.setText(filename)
-        self.last_file_label.setStyleSheet("color: #e9f1ff;")
+        self.last_file_label.setStyleSheet("")
         self.job_title_label.setText("Preview ready")
         self.job_desc_label.setText("First-section preview generated. Press Play to listen.")
         self.progress_bar.setValue(100)

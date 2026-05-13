@@ -48,7 +48,6 @@ class Sidebar(QWidget):
 
         self.setFixedWidth(220)
         self.setObjectName("sidebar")
-        self.setStyleSheet("QWidget#sidebar { background: #0a111b; border-right: 1px solid #1a2a3a; }")
 
         self._build()
 
@@ -73,9 +72,7 @@ class Sidebar(QWidget):
         header.addWidget(icon_label)
 
         app_name = QLabel("Narracast")
-        app_name.setStyleSheet(
-            "background: transparent; color: #e9f1ff; font-weight: 700; font-size: 16px;"
-        )
+        app_name.setStyleSheet("background: transparent; font-weight: 700; font-size: 16px;")
         header.addWidget(app_name)
         header.addStretch()
         root_layout.addLayout(header)
@@ -111,9 +108,6 @@ class Sidebar(QWidget):
         self._status_dot = StatusDot("#16a34a")
         status_row.addWidget(self._status_dot)
         self._device_label = MutedLabel("CPU  •  Offline")
-        self._device_label.setStyleSheet(
-            "background: transparent; color: #7f90a8; font-size: 11px;"
-        )
         status_row.addWidget(self._device_label)
         status_row.addStretch()
         root_layout.addLayout(status_row)

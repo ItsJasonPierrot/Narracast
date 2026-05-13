@@ -117,8 +117,8 @@ class ReadingPage(QWidget):
 
         # ── Top bar ─────────────────────────────────────────────────────
         top_bar = QWidget()
+        top_bar.setObjectName("reader_top_bar")
         top_bar.setFixedHeight(52)
-        top_bar.setStyleSheet("background: #101a27; border-bottom: 1px solid #1a2a3a;")
         top_layout = QHBoxLayout(top_bar)
         top_layout.setContentsMargins(12, 0, 12, 0)
         top_layout.setSpacing(8)
@@ -188,8 +188,8 @@ class ReadingPage(QWidget):
 
         # ── Bookmark bar ─────────────────────────────────────────────────
         bm_bar = QWidget()
+        bm_bar.setObjectName("reader_bm_bar")
         bm_bar.setFixedHeight(42)
-        bm_bar.setStyleSheet("background: #0a111b; border-bottom: 1px solid #1a2a3a;")
         bm_layout = QHBoxLayout(bm_bar)
         bm_layout.setContentsMargins(12, 0, 12, 0)
         bm_layout.setSpacing(8)
@@ -220,8 +220,8 @@ class ReadingPage(QWidget):
 
         # ── Display bar ───────────────────────────────────────────────────
         disp_bar = QWidget()
+        disp_bar.setObjectName("reader_disp_bar")
         disp_bar.setFixedHeight(40)
-        disp_bar.setStyleSheet("background: #0f1724; border-bottom: 1px solid #1a2a3a;")
         disp_layout = QHBoxLayout(disp_bar)
         disp_layout.setContentsMargins(12, 0, 12, 0)
         disp_layout.setSpacing(12)
@@ -325,8 +325,8 @@ class ReadingPage(QWidget):
 
         # ── Bottom bar ────────────────────────────────────────────────────
         bottom_bar = QWidget()
+        bottom_bar.setObjectName("reader_bottom_bar")
         bottom_bar.setFixedHeight(52)
-        bottom_bar.setStyleSheet("background: #101a27; border-top: 1px solid #1a2a3a;")
         bottom_layout = QHBoxLayout(bottom_bar)
         bottom_layout.setContentsMargins(12, 0, 12, 0)
         bottom_layout.setSpacing(10)
@@ -338,7 +338,7 @@ class ReadingPage(QWidget):
         bottom_layout.addWidget(self._seek_slider, stretch=1)
 
         self._time_label = QLabel("00:00 / 00:00")
-        self._time_label.setStyleSheet("color: #7f90a8; font-size: 11px; background: transparent;")
+        self._time_label.setObjectName("muted")
         self._time_label.setFixedWidth(110)
         bottom_layout.addWidget(self._time_label)
         root.addWidget(bottom_bar)

@@ -215,16 +215,17 @@ class VoicePage(QWidget):
         card_layout.addWidget(Divider())
 
         # Waveform placeholder
-        card_layout.addWidget(SectionLabel("Waveform preview"))
+        card_layout.addWidget(SectionLabel("Waveform"))
 
         wave_frame = QFrame()
         wave_frame.setFixedHeight(80)
         wave_frame.setFrameShape(QFrame.Shape.StyledPanel)
+        wave_frame.setObjectName("wave_placeholder")
         wave_frame.setStyleSheet(
-            "QFrame { border: 1px dashed #3b4d63; border-radius: 6px; background: #0a111b; }"
+            "QFrame#wave_placeholder { border: 1px dashed #3b4d63; border-radius: 6px; background: #0a111b; }"
         )
         wave_inner = QVBoxLayout(wave_frame)
-        wave_label = MutedLabel("Waveform preview")
+        wave_label = MutedLabel("Visual waveform — coming soon")
         wave_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         wave_inner.addWidget(wave_label)
         card_layout.addWidget(wave_frame)
@@ -255,7 +256,7 @@ class VoicePage(QWidget):
         self.stop_btn.clicked.connect(self._stop_preview)
         btn_row.addWidget(self.stop_btn)
 
-        self.save_btn = QPushButton("Save as reference.wav")
+        self.save_btn = QPushButton("Save reference")
         self.save_btn.setIcon(icons.accent(icons.SAVE))
         self.save_btn.setObjectName("primary")
         self.save_btn.setFixedHeight(34)
@@ -277,7 +278,7 @@ class VoicePage(QWidget):
         # Status label
         self._status_label = QLabel("")
         self._status_label.setStyleSheet(
-            "color: #a3ff73; font-family: Menlo; font-size: 12px; background: transparent;"
+            "color: #a3ff73; font-family: monospace; font-size: 12px; background: transparent;"
         )
         self._status_label.setWordWrap(True)
         card_layout.addWidget(self._status_label)

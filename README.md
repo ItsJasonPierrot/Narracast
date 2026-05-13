@@ -249,6 +249,8 @@ Organise long texts into projects. Each project holds a list of chapters, each w
 
 - **Automatic chapter splitting** — paste a long text and let the app detect headings and split into draft chapters for review before queueing.
 - **Reading sessions** — break chapters into manageable estimated-duration sessions with progress tracking.
+- **Read Session** — open the first generated chapter in a session directly in the reading companion; a Next chapter button advances through the rest of the session without leaving the reader.
+- **Export M4B** — combine all generated chapters into a single `.m4b` audiobook file with native chapter markers, ready for any audiobook player. A chapter audit table shows readiness before export; chapters without audio can be skipped or blocked depending on your choice.
 
 ### Help
 
@@ -258,16 +260,16 @@ Quick reference guide built into the app.
 
 ## What's Next
 
-The core reading-companion feature set is complete. Active development is focused on:
+The core feature set — generation, reading companion, project mode, session tracking, and M4B export — is complete. Active development is focused on:
 
-### Medium-term
-- **Session-level reader launch** — open the reader directly from a reading session in Projects
+### Near-term polish
+- **Queue audio polish parity** — carry Advanced audio polish settings (bitrate, normalization, fade, trim) through queued jobs, not just immediate generation
 - **Manual session reorder** — drag sessions into a different order within a project
 - **Project import flow** — import an existing folder of MP3s as a project
 
 ### Larger features
-- **M4B audiobook export** — combine chapters into a single `.m4b` file with native chapter markers for audiobook players
 - **Streaming chunk playback** — start listening after the first generated chunk instead of waiting for the full export
+- **Async MP3 finalization** — data-gated: run real long-chapter generations and check the Timing Analysis dialog; only worth building if finalization is a meaningful share of total time
 
 ### Deferred / research
 - **Word-level highlighting** — per-word karaoke-style sync using forced speech alignment
@@ -316,9 +318,11 @@ Narracast/
 │   ├── settings.py                  — local user preferences
 │   ├── playback.py                  — audio playback, position tracking, bookmarks
 │   ├── benchmark.py                 — local preset speed benchmark helper
+│   ├── m4b_export.py                — chapter audit, FFmetadata builder, ffmpeg M4B export
 │   └── ui/
 │       ├── main_window.py           — QMainWindow shell, sidebar, stacked pages
 │       ├── benchmark_dialog.py      — PySide6 benchmark results dialog
+│       ├── m4b_export_dialog.py     — M4B export dialog with audit table and progress
 │       ├── sidebar.py               — left navigation and system status
 │       ├── theme.py                 — PySide6 dark/light app stylesheet
 │       ├── icons.py                 — centralised qtawesome/mdi6 icon registry
@@ -359,7 +363,7 @@ Narracast/
 | soundfile | Writing intermediate WAV files |
 | pdfminer.six | Extracting text from PDF uploads |
 | mutagen | Writing ID3 tags to generated MP3 files |
-| ffmpeg | Extracting voice reference clips |
+| ffmpeg | Voice reference clip extraction and M4B audiobook export |
 
 ---
 

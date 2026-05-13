@@ -265,6 +265,10 @@ class ProjectsPage(QWidget):
         self.read_session_btn.setObjectName("primary")
         self.read_session_btn.setEnabled(False)
         self.read_session_btn.clicked.connect(self._read_selected_session)
+        self.export_m4b_btn = QPushButton("Export M4B")
+        self.export_m4b_btn.setIcon(icons.icon(icons.SAVE))
+        self.export_m4b_btn.setEnabled(False)
+        self.export_m4b_btn.clicked.connect(self._export_m4b)
         for btn in [
             self.build_sessions_btn,
             self.rename_session_btn,
@@ -273,6 +277,7 @@ class ProjectsPage(QWidget):
             self.complete_session_btn,
             self.resume_session_btn,
             self.read_session_btn,
+            self.export_m4b_btn,
         ]:
             session_btns.addWidget(btn)
         session_btns.addStretch()
@@ -423,6 +428,16 @@ class ProjectsPage(QWidget):
             and bool(session_readable_chapters(self._current_project, session))
         )
         self.read_session_btn.setEnabled(has_readable)
+        # Export M4B is enabled at the project level (any ready chapter).
+        has_any_ready = (
+            self._current_project is not None
+            and any(
+                c.get("status") == "generated"
+                and bool(c.get("output_path"))
+                for c in self._current_project.get("chapters", [])
+            )
+        )
+        self.export_m4b_btn.setEnabled(has_any_ready)
 
     def _update_summary(self) -> None:
         if not self._current_project:
@@ -740,6 +755,13 @@ class ProjectsPage(QWidget):
         )
         self._load_project(self._current_project["id"])
 
+    def _export_m4b(self) -> None:
+        if not self._current_project:
+            return
+        from narracast.ui.m4b_export_dialog import M4BExportDialog
+        dlg = M4BExportDialog(self._current_project, parent=self)
+        dlg.exec()
+
     def _resume_next_session(self) -> None:
         if not self._current_project:
             return
@@ -829,6 +851,7 @@ class ProjectsPage(QWidget):
             widget.setEnabled(enabled)
         if not enabled:
             self._summary_label.setText("")
+            self.export_m4b_btn.setEnabled(False)
         # Chapter- and session-specific buttons depend on selection state
         self._update_chapter_action_buttons()
         self._update_session_action_buttons()

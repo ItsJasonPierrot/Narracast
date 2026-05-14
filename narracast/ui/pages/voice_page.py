@@ -26,8 +26,8 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from narracast.audio_generation import infer_chunk
 from narracast.platform import play_audio
+from narracast.tts_process import JobCallbacks, get_tts_process
 from narracast.paths import REFERENCE
 from narracast.voices import (
     delete_voice_profile,
@@ -533,6 +533,7 @@ class VoicePage(QWidget):
         get_signals().voice_library_changed.emit()
 
     def _preview_profile(self) -> None:
+        import uuid as _uuid  # noqa: PLC0415
         profile = self._selected_profile()
         if not profile:
             return
@@ -549,17 +550,30 @@ class VoicePage(QWidget):
 
         self._status_label.setText("Generating saved-voice preview…")
 
-        def _worker() -> None:
+        def _on_preview_done(wav_path: str) -> None:
+            preview_path = preview_path_for_profile(profile, sample_text)
+            preview_path.parent.mkdir(parents=True, exist_ok=True)
             try:
-                path = infer_chunk(sample_text[:300], profile.ref_audio, 1.0, nfe_step=16)
-                preview_path = preview_path_for_profile(profile, sample_text)
-                preview_path.parent.mkdir(parents=True, exist_ok=True)
-                shutil.move(path, preview_path)
-                get_signals().voice_preview_done.emit(str(preview_path))
-            except Exception as exc:
-                get_signals().voice_preview_error.emit(str(exc))
+                shutil.move(wav_path, str(preview_path))
+                wav_path = str(preview_path)
+            except Exception:  # noqa: BLE001
+                pass
+            get_signals().voice_preview_done.emit(wav_path)
 
-        threading.Thread(target=_worker, daemon=True).start()
+        callbacks = JobCallbacks(
+            on_preview_done=_on_preview_done,
+            on_error=lambda err: get_signals().voice_preview_error.emit(err),
+        )
+        get_tts_process().submit_preview(
+            {
+                "job_id": _uuid.uuid4().hex[:8],
+                "text": sample_text[:300],
+                "voice_path": profile.ref_audio,
+                "speed": 1.0,
+                "nfe_step": 16,
+            },
+            callbacks,
+        )
 
     def _on_voice_preview_done(self, path: str) -> None:
         self._preview_path = path

@@ -150,8 +150,9 @@ Build the bundle for the current OS:
 venv/bin/python scripts/build_bundle.py
 ```
 
-See [docs/RELEASE_BUILDS.md](docs/RELEASE_BUILDS.md) for macOS, Windows, and
-Linux release steps.
+See [docs/RELEASE_BUILDS.md](docs/RELEASE_BUILDS.md) for macOS release steps.
+
+For a full walkthrough of the app — voice setup, generation, reading, projects, and iPhone transfer — see [docs/USER_GUIDE.md](docs/USER_GUIDE.md).
 
 ---
 

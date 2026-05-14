@@ -47,6 +47,14 @@ _FAQ = [
         "can resume where you left off.",
     ),
     (
+        icons.ALERT,
+        "Privacy",
+        "Narracast runs locally and does not send your text, voices, projects, "
+        "or generated audio to a cloud service. Treat generated sidecar .json "
+        "files as private: they can include source text, timing data, bookmarks, "
+        "and reader position.",
+    ),
+    (
         icons.SAVE_VOICE,
         "Voice reference",
         "F5-TTS clones speech from a short reference clip. For best results "

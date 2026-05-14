@@ -3,7 +3,9 @@
 from __future__ import annotations
 
 import subprocess
+import shutil
 import threading
+from pathlib import Path
 from typing import Optional
 
 from PySide6.QtCore import Qt
@@ -24,7 +26,8 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from narracast.audio_generation import infer_chunk
+from narracast.platform import play_audio
+from narracast.tts_process import JobCallbacks, get_tts_process
 from narracast.paths import REFERENCE
 from narracast.voices import (
     delete_voice_profile,
@@ -33,10 +36,12 @@ from narracast.voices import (
     get_voice_files,
     list_voice_profiles,
     load_reference_text,
+    preview_path_for_profile,
     rename_voice_profile,
     save_clip,
     save_voice_profile,
     set_profile_as_reference,
+    update_voice_profile_transcript,
 )
 from narracast.ui import icons
 from narracast.ui.signals import get_signals
@@ -101,6 +106,12 @@ class VoicePage(QWidget):
         self.library_detail_label.setWordWrap(True)
         library_layout.addWidget(self.library_detail_label)
 
+        self.library_transcript_edit = QTextEdit()
+        self.library_transcript_edit.setPlaceholderText("Saved voice transcript")
+        self.library_transcript_edit.setMinimumHeight(70)
+        self.library_transcript_edit.setEnabled(False)
+        library_layout.addWidget(self.library_transcript_edit)
+
         edit_row = QHBoxLayout()
         edit_row.setSpacing(8)
         self.rename_profile_btn = QPushButton("Rename / update notes")
@@ -109,6 +120,13 @@ class VoicePage(QWidget):
         self.rename_profile_btn.setEnabled(False)
         self.rename_profile_btn.clicked.connect(self._rename_profile)
         edit_row.addWidget(self.rename_profile_btn)
+
+        self.save_transcript_btn = QPushButton("Save transcript")
+        self.save_transcript_btn.setIcon(icons.icon(icons.SAVE))
+        self.save_transcript_btn.setFixedHeight(30)
+        self.save_transcript_btn.setEnabled(False)
+        self.save_transcript_btn.clicked.connect(self._save_profile_transcript)
+        edit_row.addWidget(self.save_transcript_btn)
 
         self.delete_profile_btn = QPushButton("Delete voice")
         self.delete_profile_btn.setIcon(icons.danger(icons.DELETE))
@@ -321,7 +339,6 @@ class VoicePage(QWidget):
         )
         if not path:
             return
-        from pathlib import Path
         name = Path(path).name
         existing_idx = self.voice_combo.findData(path)
         if existing_idx >= 0:
@@ -352,14 +369,20 @@ class VoicePage(QWidget):
         if not profile:
             self.library_detail_label.setText("No saved voices yet.")
             self.rename_profile_btn.setEnabled(False)
+            self.save_transcript_btn.setEnabled(False)
             self.delete_profile_btn.setEnabled(False)
             self.set_reference_btn.setEnabled(False)
             self.preview_profile_btn.setEnabled(False)
+            self.library_transcript_edit.clear()
+            self.library_transcript_edit.setEnabled(False)
             return
 
         self.profile_name_edit.setText(profile.display_name)
         self.profile_notes_edit.setText(profile.notes)
+        self.library_transcript_edit.setPlainText(profile.ref_text)
+        self.library_transcript_edit.setEnabled(True)
         self.rename_profile_btn.setEnabled(True)
+        self.save_transcript_btn.setEnabled(True)
         self.delete_profile_btn.setEnabled(True)
         self.set_reference_btn.setEnabled(True)
         self.preview_profile_btn.setEnabled(True)
@@ -395,11 +418,11 @@ class VoicePage(QWidget):
         if not self._preview_path:
             return
         self._stop_preview()
-        self._preview_proc = subprocess.Popen(
-            ["afplay", self._preview_path],
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL,
-        )
+        try:
+            self._preview_proc = play_audio(self._preview_path)
+        except Exception as exc:
+            self._status_label.setText(f"Cannot play preview: {exc}")
+            return
         self.stop_btn.setEnabled(True)
 
     def _stop_preview(self) -> None:
@@ -457,6 +480,23 @@ class VoicePage(QWidget):
         self._refresh_library()
         get_signals().voice_library_changed.emit()
 
+    def _save_profile_transcript(self) -> None:
+        profile = self._selected_profile()
+        if not profile:
+            return
+        try:
+            updated = update_voice_profile_transcript(
+                profile.id,
+                self.library_transcript_edit.toPlainText(),
+            )
+        except Exception as exc:
+            self._status_label.setText(f"{exc}")
+            return
+
+        self._status_label.setText(f"Updated transcript for: {updated.display_name}.")
+        self._refresh_library()
+        get_signals().voice_library_changed.emit()
+
     def _delete_profile(self) -> None:
         profile = self._selected_profile()
         if not profile:
@@ -493,6 +533,7 @@ class VoicePage(QWidget):
         get_signals().voice_library_changed.emit()
 
     def _preview_profile(self) -> None:
+        import uuid as _uuid  # noqa: PLC0415
         profile = self._selected_profile()
         if not profile:
             return
@@ -502,26 +543,48 @@ class VoicePage(QWidget):
             return
 
         self.preview_profile_btn.setEnabled(False)
+        cached_preview = preview_path_for_profile(profile, sample_text)
+        if cached_preview.exists():
+            self._on_voice_preview_done(str(cached_preview))
+            return
+
         self._status_label.setText("Generating saved-voice preview…")
 
-        def _worker() -> None:
+        def _on_preview_done(wav_path: str) -> None:
+            preview_path = preview_path_for_profile(profile, sample_text)
+            preview_path.parent.mkdir(parents=True, exist_ok=True)
             try:
-                path = infer_chunk(sample_text[:300], profile.ref_audio, 1.0, nfe_step=16)
-                get_signals().voice_preview_done.emit(path)
-            except Exception as exc:
-                get_signals().voice_preview_error.emit(str(exc))
+                shutil.move(wav_path, str(preview_path))
+                wav_path = str(preview_path)
+            except Exception:  # noqa: BLE001
+                pass
+            get_signals().voice_preview_done.emit(wav_path)
 
-        threading.Thread(target=_worker, daemon=True).start()
+        callbacks = JobCallbacks(
+            on_preview_done=_on_preview_done,
+            on_error=lambda err: get_signals().voice_preview_error.emit(err),
+        )
+        get_tts_process().submit_preview(
+            {
+                "job_id": _uuid.uuid4().hex[:8],
+                "text": sample_text[:300],
+                "voice_path": profile.ref_audio,
+                "speed": 1.0,
+                "nfe_step": 16,
+            },
+            callbacks,
+        )
 
     def _on_voice_preview_done(self, path: str) -> None:
         self._preview_path = path
         self._stop_preview()
-        self._preview_proc = subprocess.Popen(
-            ["afplay", path],
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL,
-        )
-        self.stop_btn.setEnabled(True)
+        try:
+            self._preview_proc = play_audio(path)
+            self.stop_btn.setEnabled(True)
+        except Exception as exc:
+            self._status_label.setText(f"Cannot play preview: {exc}")
+            self.preview_profile_btn.setEnabled(self.library_combo.count() > 0)
+            return
         self.preview_profile_btn.setEnabled(self.library_combo.count() > 0)
         self._status_label.setText("Saved-voice preview ready.")
 

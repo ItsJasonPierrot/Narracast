@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import subprocess
 import time
 import uuid
 from pathlib import Path
@@ -27,7 +26,9 @@ from PySide6.QtWidgets import (
 )
 
 from narracast.chapter_splitter import import_chapters
+from narracast.mp3_folder_import import import_mp3_folder
 from narracast.output_files import is_supported_audio_path, load_file
+from narracast.platform import reveal_path
 from narracast.projects import (
     add_chapter,
     create_project,
@@ -37,6 +38,7 @@ from narracast.projects import (
     load_project,
     mark_session_complete,
     merge_session_with_next,
+    move_session,
     next_unfinished_session,
     project_summary,
     rebuild_sessions,
@@ -194,6 +196,10 @@ class ProjectsPage(QWidget):
         self.import_file_btn.setIcon(icons.icon(icons.IMPORT_FILE))
         self.import_file_btn.clicked.connect(self._import_text_file)
         split_row.addWidget(self.import_file_btn)
+        self.import_mp3_folder_btn = QPushButton("Import MP3 folder")
+        self.import_mp3_folder_btn.setIcon(icons.icon(icons.FOLDER_OPEN))
+        self.import_mp3_folder_btn.clicked.connect(self._import_mp3_folder)
+        split_row.addWidget(self.import_mp3_folder_btn)
         self.split_chapters_btn = QPushButton("Import pasted text")
         self.split_chapters_btn.setIcon(icons.icon(icons.SCISSORS))
         self.split_chapters_btn.clicked.connect(self._split_pasted_text)
@@ -265,6 +271,12 @@ class ProjectsPage(QWidget):
         self.split_session_btn.clicked.connect(self._split_selected_session)
         self.merge_session_btn = QPushButton("Merge next")
         self.merge_session_btn.clicked.connect(self._merge_selected_session)
+        self.move_session_up_btn = QPushButton("Up")
+        self.move_session_up_btn.setIcon(icons.icon(icons.ARROW_UP))
+        self.move_session_up_btn.clicked.connect(lambda: self._move_selected_session(-1))
+        self.move_session_down_btn = QPushButton("Down")
+        self.move_session_down_btn.setIcon(icons.icon(icons.ARROW_DOWN))
+        self.move_session_down_btn.clicked.connect(lambda: self._move_selected_session(1))
         self.complete_session_btn = QPushButton("Mark complete")
         self.complete_session_btn.clicked.connect(self._mark_session_complete)
         self.resume_session_btn = QPushButton("Resume next")
@@ -284,6 +296,8 @@ class ProjectsPage(QWidget):
             self.rename_session_btn,
             self.split_session_btn,
             self.merge_session_btn,
+            self.move_session_up_btn,
+            self.move_session_down_btn,
             self.complete_session_btn,
         ]:
             session_btns.addWidget(btn)
@@ -437,9 +451,15 @@ class ProjectsPage(QWidget):
             self.rename_session_btn,
             self.split_session_btn,
             self.merge_session_btn,
+            self.move_session_up_btn,
+            self.move_session_down_btn,
             self.complete_session_btn,
         ]:
             btn.setEnabled(has_session)
+        sessions = self._current_project.get("sessions", []) if self._current_project else []
+        index = sessions.index(session) if session in sessions else -1
+        self.move_session_up_btn.setEnabled(has_session and index > 0)
+        self.move_session_down_btn.setEnabled(has_session and 0 <= index < len(sessions) - 1)
         has_readable = (
             has_session
             and self._current_project is not None
@@ -581,7 +601,10 @@ class ProjectsPage(QWidget):
         chapter = self._selected_chapter()
         output_path = chapter.get("output_path", "") if chapter else ""
         if is_supported_audio_path(output_path):
-            subprocess.Popen(["open", "-R", output_path])
+            try:
+                reveal_path(output_path)
+            except Exception as exc:
+                self.status_label.setText(f"Cannot reveal file: {exc}")
         else:
             self.status_label.setText("No revealable audio output found for this chapter.")
 
@@ -626,6 +649,50 @@ class ProjectsPage(QWidget):
             source_name=Path(path).name,
             source_path=path,
         )
+
+    def _import_mp3_folder(self) -> None:
+        if not self._current_project:
+            return
+        folder = QFileDialog.getExistingDirectory(
+            self,
+            "Select folder containing MP3 files",
+            "",
+            QFileDialog.Option.ShowDirsOnly,
+        )
+        if not folder:
+            return
+        try:
+            summary, project = import_mp3_folder(
+                self._current_project["id"],
+                folder,
+            )
+        except ValueError as exc:
+            self.status_label.setText(str(exc))
+            return
+        if project is None:
+            self.status_label.setText("Project not found.")
+            return
+        if summary.total == 0:
+            self.status_label.setText("No MP3 files found in that folder.")
+            return
+        parts = [f"Imported {summary.total} MP3{'s' if summary.total != 1 else ''}."]
+        if summary.imported_with_sidecar:
+            parts.append(
+                f"{summary.imported_with_sidecar} linked"
+                f" (sidecar{'s' if summary.imported_with_sidecar != 1 else ''} found)."
+            )
+        if summary.imported_as_stub:
+            parts.append(
+                f"{summary.imported_as_stub} stub"
+                f"{'s' if summary.imported_as_stub != 1 else ''} (no sidecar — add text to queue)."
+            )
+        if summary.sessions_built:
+            parts.append(
+                f"Built {summary.sessions_built}"
+                f" session{'s' if summary.sessions_built != 1 else ''}."
+            )
+        self.status_label.setText(" ".join(parts))
+        self._load_project(self._current_project["id"])
 
     def _import_text_as_chapters(
         self,
@@ -773,6 +840,19 @@ class ProjectsPage(QWidget):
         )
         self._load_project(self._current_project["id"])
 
+    def _move_selected_session(self, direction: int) -> None:
+        if not self._current_project:
+            return
+        session = self._selected_session()
+        if not session:
+            return
+        project_id = self._current_project["id"]
+        session_id = session["id"]
+        moved = move_session(project_id, session_id, direction)
+        self.status_label.setText("Session moved." if moved else "Session cannot move further.")
+        self._load_project(project_id)
+        self._select_session(session_id)
+
     def _export_m4b(self) -> None:
         if not self._current_project:
             return
@@ -844,6 +924,13 @@ class ProjectsPage(QWidget):
                 self.chapter_tree.setCurrentItem(item)
                 return
 
+    def _select_session(self, session_id: str) -> None:
+        for i in range(self.session_tree.topLevelItemCount()):
+            item = self.session_tree.topLevelItem(i)
+            if item.data(0, Qt.ItemDataRole.UserRole) == session_id:
+                self.session_tree.setCurrentItem(item)
+                return
+
     def _set_detail_enabled(self, enabled: bool) -> None:
         for widget in [
             self.title_edit,
@@ -857,6 +944,7 @@ class ProjectsPage(QWidget):
             self.chapter_text_edit,
             self.split_marker_edit,
             self.import_file_btn,
+            self.import_mp3_folder_btn,
             self.split_chapters_btn,
             self.add_chapter_btn,
             self.queue_all_btn,
@@ -865,6 +953,8 @@ class ProjectsPage(QWidget):
             self.session_tree,
             self.build_sessions_btn,
             self.resume_session_btn,
+            self.move_session_up_btn,
+            self.move_session_down_btn,
         ]:
             widget.setEnabled(enabled)
         if not enabled:

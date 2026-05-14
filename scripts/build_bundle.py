@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import importlib.util
 import platform
 import shutil
@@ -96,6 +97,13 @@ def package_output(target: Path) -> Path:
     return Path(archive)
 
 
+def write_checksum(path: Path) -> Path:
+    digest = hashlib.sha256(path.read_bytes()).hexdigest()
+    checksum_path = path.with_suffix(path.suffix + ".sha256")
+    checksum_path.write_text(f"{digest}  {path.name}\n", encoding="utf-8")
+    return checksum_path
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
@@ -115,7 +123,9 @@ def main() -> None:
         print(f"Built Narracast in {DIST_DIR}")
         return
     archive = package_output(target)
+    checksum = write_checksum(archive)
     print(f"Created {archive}")
+    print(f"Created {checksum}")
 
 
 if __name__ == "__main__":

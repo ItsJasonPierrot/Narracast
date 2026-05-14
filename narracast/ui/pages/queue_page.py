@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-import subprocess
-
 from PySide6.QtCore import Qt, QTimer
 from PySide6.QtGui import QColor
 from PySide6.QtWidgets import (
@@ -27,6 +25,7 @@ from narracast.queue_manager import (
     list_jobs,
     retry_job,
 )
+from narracast.platform import reveal_path
 from narracast.ui.widgets import Card, MutedLabel
 
 
@@ -214,7 +213,7 @@ class QueuePage(QWidget):
     def _reveal_selected(self) -> None:
         job = self._selected_job()
         if job and job.output_path:
-            subprocess.Popen(["open", "-R", job.output_path])
+            reveal_path(job.output_path)
 
     def _clear_completed(self) -> None:
         clear_finished_jobs()

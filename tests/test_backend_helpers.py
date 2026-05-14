@@ -309,6 +309,51 @@ class BackendHelperTests(unittest.TestCase):
                 voices.VOICES_DIR = original_voices_dir
                 voices.clear_reference_cache()
 
+    def test_update_voice_profile_transcript_rewrites_text_and_signature(self):
+        original_voices_dir = voices.VOICES_DIR
+        with tempfile.TemporaryDirectory() as tmp:
+            voices.VOICES_DIR = Path(tmp) / "voices"
+            voices.VOICES_DIR.mkdir()
+            clip = Path(tmp) / "clip.wav"
+            clip.write_bytes(b"fake wav")
+            try:
+                profile = voices.save_voice_profile(str(clip), "Transcript Voice", "old")
+                first = voices.reference_signature(profile.ref_audio)
+
+                updated = voices.update_voice_profile_transcript(profile.id, "new words")
+                second = voices.reference_signature(updated.ref_audio)
+
+                self.assertEqual(updated.ref_text, "new words")
+                self.assertEqual(
+                    Path(updated.ref_audio).with_name("reference.txt").read_text(),
+                    "new words",
+                )
+                self.assertNotEqual(first, second)
+            finally:
+                voices.VOICES_DIR = original_voices_dir
+                voices.clear_reference_cache()
+
+    def test_preview_path_for_profile_is_stable_per_sample(self):
+        original_voices_dir = voices.VOICES_DIR
+        with tempfile.TemporaryDirectory() as tmp:
+            voices.VOICES_DIR = Path(tmp) / "voices"
+            voices.VOICES_DIR.mkdir()
+            clip = Path(tmp) / "clip.wav"
+            clip.write_bytes(b"fake wav")
+            try:
+                profile = voices.save_voice_profile(str(clip), "Preview Voice")
+                first = voices.preview_path_for_profile(profile, "hello world")
+                second = voices.preview_path_for_profile(profile, "hello world")
+                other = voices.preview_path_for_profile(profile, "different")
+
+                self.assertEqual(first, second)
+                self.assertNotEqual(first, other)
+                self.assertEqual(first.parent, voices.VOICES_DIR / profile.id)
+                self.assertTrue(first.name.startswith("preview_"))
+            finally:
+                voices.VOICES_DIR = original_voices_dir
+                voices.clear_reference_cache()
+
     def test_delete_voice_profile_removes_profile_folder(self):
         original_voices_dir = voices.VOICES_DIR
         with tempfile.TemporaryDirectory() as tmp:

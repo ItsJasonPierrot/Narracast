@@ -205,6 +205,33 @@ def rename_voice_profile(profile_id: str, display_name: str, notes: str | None =
     return updated
 
 
+def update_voice_profile_transcript(profile_id: str, ref_text: str) -> VoiceProfile:
+    """Update a saved voice transcript without changing its reference audio."""
+    profile = get_voice_profile(profile_id)
+    if not profile:
+        raise FileNotFoundError("Voice profile not found.")
+
+    clean_text = str(ref_text or "").strip()
+    text_path = profile.folder / "reference.txt"
+    text_path.write_text(clean_text, encoding="utf-8")
+
+    updated = VoiceProfile(
+        id=profile.id,
+        display_name=profile.display_name,
+        ref_audio=profile.ref_audio,
+        ref_text=clean_text,
+        notes=profile.notes,
+        source_file=profile.source_file,
+        clip_start_s=profile.clip_start_s,
+        clip_duration_s=profile.clip_duration_s,
+        created_at=profile.created_at,
+        updated_at=_now_iso(),
+    )
+    _write_profile_metadata(updated)
+    clear_reference_cache()
+    return updated
+
+
 def delete_voice_profile(profile_id: str) -> bool:
     profile = get_voice_profile(profile_id)
     if not profile:
@@ -212,6 +239,13 @@ def delete_voice_profile(profile_id: str) -> bool:
     shutil.rmtree(profile.folder)
     clear_reference_cache()
     return True
+
+
+def preview_path_for_profile(profile: VoiceProfile, sample_text: str) -> Path:
+    """Return the reusable preview WAV path for *profile* and *sample_text*."""
+    sample = str(sample_text or "")[:300].strip()
+    digest = hashlib.sha256(sample.encode("utf-8")).hexdigest()[:16]
+    return profile.folder / f"preview_{digest}.wav"
 
 
 def get_voice_files():

@@ -1,8 +1,8 @@
 """Audio playback engine with wall-clock position tracking.
 
-Uses afplay for basic playback on macOS.
 Uses ffplay (part of ffmpeg) for seeking to an offset when available;
-falls back to afplay from the beginning if ffplay is not installed.
+falls back to the platform audio helper from the beginning if ffplay is not
+installed.
 
 Position updates are fired to `on_position(ms: int)` every POLL_MS
 milliseconds from a background thread.  Callers must schedule any UI
@@ -17,6 +17,8 @@ import threading
 import time
 from pathlib import Path
 from typing import Callable, Optional
+
+from .platform import play_audio
 
 
 POLL_MS = 250  # position-update interval
@@ -142,7 +144,12 @@ def _ffplay_available() -> bool:
 
 
 def _launch(file_path: str, offset_ms: int) -> subprocess.Popen:
-    """Start audio playback, seeking to `offset_ms` when possible."""
+    """Start audio playback, seeking to ``offset_ms`` when possible.
+
+    Seeking requires ffplay (part of ffmpeg).  When ffplay is not available the
+    file plays from the beginning regardless of ``offset_ms``; this is a known
+    limitation on systems without ffmpeg installed.
+    """
     if offset_ms > 500 and _ffplay_available():
         return subprocess.Popen(
             [
@@ -156,11 +163,10 @@ def _launch(file_path: str, offset_ms: int) -> subprocess.Popen:
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,
         )
-    return subprocess.Popen(
-        ["afplay", file_path],
-        stdout=subprocess.DEVNULL,
-        stderr=subprocess.DEVNULL,
-    )
+    # ffplay not available or offset within tolerance — fall back to the
+    # platform player from position 0.  On Windows this is the PowerShell
+    # MediaPlayer approach; on Linux this requires ffplay, mpg123, or aplay.
+    return play_audio(file_path)
 
 
 # ── Position persistence ──────────────────────────────────────────────────────

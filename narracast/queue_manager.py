@@ -8,7 +8,6 @@ from dataclasses import dataclass, field, replace
 from typing import Optional, Any
 
 from .audio_polish import AudioPolishSettings
-from .audio_generation import generate_core
 from .presets import DEFAULT_PRESET
 from .voices import get_voice_files
 
@@ -106,6 +105,71 @@ def retry_job(job_id: str) -> tuple[str, Optional[Job]]:
     return "queued", replace(retry)
 
 
+def _run_job(job: Job) -> None:
+    """Submit one job to the TTS worker process and block until it completes."""
+    from .tts_process import get_tts_process, JobCallbacks  # noqa: PLC0415
+
+    done_event = threading.Event()
+    result: dict = {"path": None, "error": None, "cancelled": False}
+
+    def on_progress(frac: float, desc: str = "") -> None:
+        job.progress = f"{int(frac * 100)}%  {desc}"
+
+    def on_done(path: str, _summary: str) -> None:
+        result["path"] = path
+        done_event.set()
+
+    def on_error(err: str) -> None:
+        result["error"] = err
+        done_event.set()
+
+    def on_cancelled() -> None:
+        result["cancelled"] = True
+        done_event.set()
+
+    callbacks = JobCallbacks(
+        on_progress=on_progress,
+        on_done=on_done,
+        on_error=on_error,
+        on_cancelled=on_cancelled,
+    )
+    get_tts_process().submit_job(
+        {
+            "job_id": job.id,
+            "text": job.text,
+            "voice_name": job.voice,
+            "speed": job.speed,
+            "title": job.title,
+            "part": job.part,
+            "preset_name": job.preset,
+            "paragraph_pause_ms": job.paragraph_pause_ms,
+            "sentence_pause_ms": job.sentence_pause_ms,
+            "audio_polish": job.audio_polish,
+            "project_id": job.project_id,
+            "chapter_id": job.chapter_id,
+        },
+        callbacks,
+    )
+    done_event.wait()  # block until done / error / cancelled
+
+    if result["path"]:
+        job.status = "done"
+        job.output_path = result["path"]
+        job.progress = "Complete"
+        if job.project_id and job.chapter_id:
+            from .projects import mark_chapter_generated  # noqa: PLC0415
+            mark_chapter_generated(job.project_id, job.chapter_id, result["path"])
+    elif result["cancelled"]:
+        job.status = "cancelled"
+        job.progress = "Cancelled"
+    else:
+        job.status = "error"
+        job.error_msg = str(result["error"] or "Unknown error")[:200]
+        if job.project_id and job.chapter_id:
+            from .projects import mark_chapter_error  # noqa: PLC0415
+            mark_chapter_error(job.project_id, job.chapter_id)
+
+
 def _worker():
     while True:
         job_id = _work_q.get()
@@ -121,43 +185,8 @@ def _worker():
             continue
         job.status = "generating"
         job.progress = "Starting…"
-
-        def on_progress(frac, desc="", _job=job):
-            _job.progress = f"{int(frac * 100)}%  {desc}"
-
         try:
-            path, _ = generate_core(
-                job.text,
-                job.voice,
-                job.speed,
-                job.title,
-                job.part,
-                on_progress,
-                job.preset,
-                paragraph_pause_ms=job.paragraph_pause_ms,
-                sentence_pause_ms=job.sentence_pause_ms,
-                audio_polish=(
-                    AudioPolishSettings.from_dict(job.audio_polish)
-                    if job.audio_polish
-                    else None
-                ),
-                project_id=job.project_id,
-                chapter_id=job.chapter_id,
-            )
-            job.status = "done"
-            job.output_path = path
-            job.progress = "Complete"
-            if job.project_id and job.chapter_id:
-                from .projects import mark_chapter_generated
-
-                mark_chapter_generated(job.project_id, job.chapter_id, path)
-        except Exception as e:
-            job.status = "error"
-            job.error_msg = str(e)[:200]
-            if job.project_id and job.chapter_id:
-                from .projects import mark_chapter_error
-
-                mark_chapter_error(job.project_id, job.chapter_id)
+            _run_job(job)
         finally:
             _work_q.task_done()
 

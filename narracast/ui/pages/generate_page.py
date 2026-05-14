@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
-import subprocess
-import threading
 import hashlib
+import subprocess
+import uuid
 from pathlib import Path
 from typing import Optional
 
@@ -27,9 +27,11 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from narracast.audio_generation import generate_core
 from narracast.audio_polish import AudioPolishSettings, VALID_BITRATES
+from narracast.chunk_stream import ChunkStreamer
+from narracast.tts_process import JobCallbacks, get_tts_process
 from narracast.output_files import load_file
+from narracast.platform import play_audio, reveal_label, reveal_path
 from narracast.presets import DEFAULT_PRESET, GENERATION_PRESETS
 from narracast.queue_manager import add_to_queue
 from narracast.text_cleanup import (
@@ -101,6 +103,7 @@ class GeneratePage(QWidget):
         self._raw_text_snapshot = ""
         self._cleaned_text_snapshot = ""
         self._model_ready = False
+        self._streamer: Optional[ChunkStreamer] = None
         self._build_ui()
         self._connect_signals()
         self._populate_voices()
@@ -468,7 +471,7 @@ class GeneratePage(QWidget):
         out_layout.addWidget(self._time_label)
 
         dl_row = QHBoxLayout()
-        self._reveal_btn = QPushButton("Reveal")
+        self._reveal_btn = QPushButton(reveal_label())
         self._reveal_btn.setIcon(icons.icon(icons.REVEAL))
         self._reveal_btn.setEnabled(False)
         self._reveal_btn.setFixedHeight(28)
@@ -665,21 +668,63 @@ class GeneratePage(QWidget):
         self.progress_bar.setValue(0)
         self._set_generation_buttons_enabled(False)
 
-        def _worker():
-            try:
-                path, msg = generate_core(
-                    text, voice, speed, title, part,
-                    on_progress=lambda f, d: get_signals().generation_progress.emit(f, d),
-                    preset_name=preset,
-                    paragraph_pause_ms=pause_ms,
-                    sentence_pause_ms=sentence_pause_ms,
-                    audio_polish=polish,
-                )
-                get_signals().generation_done.emit(path, msg)
-            except Exception as e:
-                get_signals().generation_error.emit(str(e))
+        # Stop any previous streamer before starting a new one
+        if self._streamer is not None:
+            self._streamer.stop()
+            self._streamer = None
 
-        threading.Thread(target=_worker, daemon=True).start()
+        streamer = ChunkStreamer()
+        streaming_active = streamer.start()
+        if streaming_active:
+            self._streamer = streamer
+            self.job_eta_label.setText("Streaming audio as it generates…")
+        else:
+            self._streamer = None
+
+        def on_progress(frac: float, desc: str) -> None:
+            get_signals().generation_progress.emit(frac, desc)
+
+        def on_chunk(segment) -> None:
+            if streaming_active and streamer.is_running:
+                streamer.feed(segment)
+
+        def on_done(path: str, message: str) -> None:
+            if streaming_active:
+                streamer.close()
+            get_signals().generation_done.emit(path, message)
+
+        def on_error(err: str) -> None:
+            if streaming_active:
+                streamer.stop()
+            get_signals().generation_error.emit(err)
+
+        def on_cancelled() -> None:
+            if streaming_active:
+                streamer.stop()
+            get_signals().generation_error.emit("Generation cancelled.")
+
+        callbacks = JobCallbacks(
+            on_progress=on_progress,
+            on_chunk=on_chunk,
+            on_done=on_done,
+            on_error=on_error,
+            on_cancelled=on_cancelled,
+        )
+        get_tts_process().submit_job(
+            {
+                "job_id": uuid.uuid4().hex[:8],
+                "text": text,
+                "voice_name": voice,
+                "speed": speed,
+                "title": title,
+                "part": part,
+                "preset_name": preset,
+                "paragraph_pause_ms": pause_ms,
+                "sentence_pause_ms": sentence_pause_ms,
+                "audio_polish": polish.to_dict() if polish else None,
+            },
+            callbacks,
+        )
 
     def _start_preview(self) -> None:
         text = self.text_edit.toPlainText().strip()
@@ -702,20 +747,28 @@ class GeneratePage(QWidget):
             get_signals().preview_done.emit(cached_path)
             return
 
-        def _worker():
-            try:
-                path, _ = generate_core(
-                    preview_text, voice, speed, "", "",
-                    on_progress=lambda f, d: get_signals().generation_progress.emit(f, d),
-                    preset_name=preset,
-                    paragraph_pause_ms=0,
-                )
-                self._preview_cache[cache_key] = path
-                get_signals().preview_done.emit(path)
-            except Exception as e:
-                get_signals().generation_error.emit(str(e))
+        def _on_preview_done(path: str, _summary: str) -> None:
+            self._preview_cache[cache_key] = path
+            get_signals().preview_done.emit(path)
 
-        threading.Thread(target=_worker, daemon=True).start()
+        callbacks = JobCallbacks(
+            on_progress=lambda f, d: get_signals().generation_progress.emit(f, d),
+            on_done=_on_preview_done,
+            on_error=lambda err: get_signals().generation_error.emit(err),
+        )
+        get_tts_process().submit_job(
+            {
+                "job_id": uuid.uuid4().hex[:8],
+                "text": preview_text,
+                "voice_name": voice,
+                "speed": speed,
+                "title": "",
+                "part": "",
+                "preset_name": preset,
+                "paragraph_pause_ms": 0,
+            },
+            callbacks,
+        )
         warning = reference_warning(voice_path)
         self.job_desc_label.setText(
             f"Generating preview from the first section… {warning}"
@@ -762,16 +815,18 @@ class GeneratePage(QWidget):
             return
         if self._play_proc and self._play_proc.poll() is None:
             self._play_proc.terminate()
-        self._play_proc = subprocess.Popen(
-            ["afplay", self._last_output_path],
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL,
-        )
+        try:
+            self._play_proc = play_audio(self._last_output_path)
+        except Exception as exc:
+            self.job_desc_label.setText(f"Cannot play audio: {exc}")
 
     def _reveal_output(self) -> None:
         if not self._last_output_path:
             return
-        subprocess.Popen(["open", "-R", self._last_output_path])
+        try:
+            reveal_path(self._last_output_path)
+        except Exception as exc:
+            self.job_desc_label.setText(f"Cannot reveal file: {exc}")
 
     def _open_benchmark(self) -> None:
         voices = get_voice_files()
@@ -800,10 +855,12 @@ class GeneratePage(QWidget):
         self.last_file_label.setStyleSheet("")
         self.job_title_label.setText("Done!")
         self.job_desc_label.setText(message)
+        self.job_eta_label.setText("")
         self.progress_bar.setValue(100)
         self._play_btn.setEnabled(True)
         self._reveal_btn.setEnabled(True)
         self._set_generation_buttons_enabled(True)
+        self._streamer = None
 
     def _on_preview_done(self, output_path: str) -> None:
         self._last_output_path = output_path
@@ -818,8 +875,12 @@ class GeneratePage(QWidget):
         self._set_generation_buttons_enabled(True)
 
     def _on_error(self, err: str) -> None:
+        if self._streamer is not None:
+            self._streamer.stop()
+            self._streamer = None
         self.job_title_label.setText("Generation failed")
         self.job_desc_label.setText(f"{err}")
+        self.job_eta_label.setText("")
         self.progress_bar.setValue(0)
         self._set_generation_buttons_enabled(True)
 

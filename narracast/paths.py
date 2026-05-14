@@ -13,6 +13,8 @@ import shutil
 import tempfile
 from pathlib import Path
 
+from .platform import log_dir as _log_dir
+
 
 APP_DIR = Path(__file__).resolve().parents[1]
 ICON_PATH = APP_DIR / "assets" / "Narracast_Icon.png"
@@ -51,11 +53,7 @@ def _writable_data_dir() -> Path:
 
 
 DATA_DIR = _writable_data_dir()
-LOG_DIR = (
-    Path.home() / "Library" / "Logs"
-    if platform.system() == "Darwin"
-    else DATA_DIR / "logs"
-)
+LOG_DIR = _log_dir()
 
 LEGACY_CLEAN_VOICE = APP_DIR / "clean_voice"
 LEGACY_VOICES_DIR = APP_DIR / "voices"

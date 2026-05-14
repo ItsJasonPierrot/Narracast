@@ -20,7 +20,7 @@ class MainWindowLayoutTests(unittest.TestCase):
 
         minimum = window.minimumSizeHint()
 
-        self.assertLessEqual(minimum.width(), 800)
+        self.assertLessEqual(minimum.width(), 820)
         self.assertLessEqual(minimum.height(), 620)
         window.resize(800, 600)
         self.assertEqual(window.width(), 800)

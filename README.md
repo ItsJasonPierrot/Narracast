@@ -2,7 +2,7 @@
 
 Narracast turns anything worth reading into something worth hearing — right on your device.
 
-A fully offline native macOS desktop app built with Python and PySide6, powered by F5-TTS.
+A fully offline native macOS desktop app built with Python and PySide6, powered by F5-TTS. Built for Apple Silicon; a companion iOS app for listening on iPhone is in development.
 
 <img width="1435" height="773" alt="image" src="https://github.com/user-attachments/assets/20b23b5f-0def-4683-87d8-bbbc92b97e5a" />
 
@@ -71,7 +71,7 @@ cd /path/to/Narracast
 venv/bin/python3 app.py
 ```
 
-A native desktop window opens automatically. On startup, Narracast shows a short loading screen, then opens the main window while the F5-TTS model continues loading in the background. Generate and Preview become available once the model is ready.
+A native desktop window opens automatically. On startup, Narracast shows a short loading screen, then opens the main window while the F5-TTS model loads in a separate background process. Generate and Preview become available once the model is ready. If the worker process crashes, the app stays running — restart generation to reload the model automatically.
 
 If the app bundle does not appear when launched from Finder or the Dock, check:
 
@@ -95,7 +95,7 @@ venv/bin/python -m pip install --upgrade pip
 venv/bin/python -m pip install -e .
 ```
 
-You will also need `ffmpeg` installed on your system:
+You will also need `ffmpeg` and `ffplay` (both bundled with the ffmpeg formula):
 
 ```bash
 brew install ffmpeg
@@ -150,8 +150,9 @@ Build the bundle for the current OS:
 venv/bin/python scripts/build_bundle.py
 ```
 
-See [docs/RELEASE_BUILDS.md](docs/RELEASE_BUILDS.md) for macOS, Windows, and
-Linux release steps.
+See [docs/RELEASE_BUILDS.md](docs/RELEASE_BUILDS.md) for macOS release steps.
+
+For a full walkthrough of the app — voice setup, generation, reading, projects, and iPhone transfer — see [docs/USER_GUIDE.md](docs/USER_GUIDE.md).
 
 ---
 
@@ -163,7 +164,7 @@ The main production page. Paste your text, set a book title and part number for 
 
 | Button | What it does |
 |---|---|
-| **Generate MP3** | Generates immediately — progress bar, elapsed time, chunk count, and ETA update as it works |
+| **Generate MP3** | Generates immediately — audio starts streaming to your speakers after the first chunk while the rest renders; progress bar, elapsed time, chunk count, and ETA update as it works |
 | **Queue it** | Adds to the background queue — you can keep adding more while it works |
 | **Preview first section** | Generates the first section with Draft settings so you can check the voice before a full export |
 
@@ -214,8 +215,8 @@ Preview generation intentionally uses Draft settings and caches repeated identic
 
 ### Progress feedback
 
-- **Startup** — a short loading screen appears, then the main window opens while the F5-TTS model finishes loading. Generate and Preview unlock when ready.
-- **Generation** — the Generate page shows a progress bar, current chunk, elapsed time, and estimated time remaining.
+- **Startup** — a short loading screen appears, then the main window opens while F5-TTS loads in a background process. Generate and Preview unlock when ready.
+- **Generation** — audio streams to your speakers after the first synthesised chunk. The Generate page shows a progress bar, current chunk, elapsed time, and estimated time remaining. The final MP3 and sidecar are written when all chunks complete.
 - **Queue jobs** — the Queue page updates every 2 seconds with each job's status and progress.
 
 ### MP3 tags
@@ -286,6 +287,18 @@ These playback controls do not modify the MP3. Sentence pause on the Generate pa
 
 Shows all queued and in-progress jobs. Refreshes every 2 seconds automatically. Jobs run one at a time in the background — add as many as you like and come back when they're done.
 
+### Transfer to iPhone
+
+Narracast runs a local HTTP server on your Mac so you can pull generated audio files to your iPhone over WiFi — no cables, no cloud, no iTunes.
+
+1. Navigate to the **Transfer** page in the sidebar.
+2. The server starts automatically and shows its address (e.g. `http://192.168.1.42:8765`).
+3. Copy the URL and open it in Safari on your iPhone to browse and download files, or use the Narracast iOS app when available.
+4. Every MP3 and its sidecar JSON (text, timeline, bookmarks) is available at `/api/audio/<filename>` and `/api/metadata/<filename>`.
+5. The server stops when you close Narracast.
+
+All transfers are local-only — no data leaves your network.
+
 ### Voice Reference
 
 Swap the voice the app clones. Pick a source audio file, set a start time and duration, paste the exact transcript spoken in the clip, then preview it.
@@ -302,9 +315,10 @@ Saved voices appear in the Generate voice selector immediately. Each saved trans
 The saved voice library also lets you:
 
 - rename a saved voice and update its notes
+- edit a saved voice transcript without re-extracting audio
 - delete a saved voice profile
 - set a saved voice as the active reference
-- generate a short sample preview from saved profile audio and transcript
+- generate and reuse short sample previews from saved profile audio and transcript
 
 ### History
 
@@ -315,7 +329,9 @@ Lists all generated MP3s, newest first, with file sizes. Select any file to **Pl
 Organise long texts into projects. Each project holds a list of chapters, each with its own text, voice, and status (draft, queued, generated, or error). Queue one chapter or all drafts at once. Projects also support:
 
 - **Automatic chapter splitting** — paste a long text and let the app detect headings and split into draft chapters for review before queueing.
+- **Import MP3 folder** — import an existing folder of MP3s as a project. Sidecar-aware chapters are created automatically in natural-sort order; files without sidecars get draft stubs.
 - **Reading sessions** — break chapters into manageable estimated-duration sessions with progress tracking.
+- **Manual session order** — move sessions up or down after splitting/merging without changing their chapters.
 - **Read Session** — open the first generated chapter in a session directly in the reading companion; a Next chapter button advances through the rest of the session without leaving the reader.
 - **Export M4B** — combine all generated chapters into a single `.m4b` audiobook file with native chapter markers, ready for any audiobook player. A chapter audit table shows readiness before export; chapters without audio can be skipped or blocked depending on your choice.
 
@@ -327,21 +343,11 @@ Quick reference guide built into the app.
 
 ## What's Next
 
-The core feature set — generation, reading companion, project mode, session tracking, and M4B export — is complete. Active development is focused on:
+The core macOS feature set — generation with live streaming playback, reading companion, project mode, session tracking, M4B export, MP3 folder import, and WiFi transfer — is complete.
 
-### Near-term polish
-- **Voice library polish** — edit saved transcripts in place and switch a saved voice into the active reference slot
-- **Manual session reorder** — drag sessions into a different order within a project
-- **Project import flow** — import an existing folder of MP3s as a project
-
-### Larger features
-- **Async MP3 finalization** — data-gated: run real long-chapter generations and check the Timing Analysis dialog; only worth building if finalization is a meaningful share of total time
-- **Streaming chunk playback** — start listening after the first generated chunk instead of waiting for the full export
-
-### Deferred / research
-- **Word-level highlighting** — per-word karaoke-style sync using forced speech alignment
-- **Local TTS backend process** — move the model into a persistent worker process for cleaner cancellation and future streaming
-- **Mobile companion** — iPhone/Android app for listening, syncing, and bookmarks
+### Near-term
+- **iOS companion app** — iPhone app for listening to transferred audio, following along with synchronized text, and syncing bookmarks and reading position back to the Mac
+- **macOS notarization** — required before distributing outside dev machines
 
 ---
 
@@ -358,6 +364,8 @@ Linux:   ~/.local/share/narracast/
 Set `NARRACAST_DATA_DIR=/path/to/data` to override this for development or portable installs. On first launch, Narracast copies old repo-root runtime folders into the app-data folder without deleting the originals.
 
 Sidecar `.json` files may contain source text, title/part metadata, timing data, reader position, and bookmarks. Everything stays local unless you manually share the files.
+
+Release archives built with `scripts/build_bundle.py` include a matching `.sha256` checksum file. `requirements.lock` records the current resolved Python environment for reproducible local builds.
 
 ## File naming
 
@@ -385,17 +393,25 @@ Narracast/
 │   ├── paths.py                     — app assets, app-data paths, legacy data migration
 │   ├── presets.py                   — generation speed/quality presets
 │   ├── text_splitter.py             — chunking and paragraph break handling
-│   ├── audio_generation.py          — F5-TTS inference and MP3 assembly
+│   ├── audio_generation.py          — F5-TTS inference, MP3 assembly, GenerationCancelled
+│   ├── audio_polish.py              — bitrate, normalisation, fade, silence-trim settings
 │   ├── text_cleanup.py              — regex-based text pre-processing helpers
 │   ├── metadata.py                  — JSON sidecar files for generated MP3s
 │   ├── queue_manager.py             — background queue and job state
+│   ├── tts_worker.py                — F5-TTS worker subprocess (JSON-lines IPC protocol)
+│   ├── tts_process.py               — GUI-side TTSProcess manager and JobCallbacks
+│   ├── chunk_stream.py              — ChunkStreamer: live PCM streaming to ffplay during generation
 │   ├── voices.py                    — voice/reference file helpers
 │   ├── projects.py                  — project and chapter management
 │   ├── chapter_splitter.py          — automatic chapter detection and splitting
+│   ├── mp3_folder_import.py         — import existing MP3 folders as sidecar-aware projects
 │   ├── output_files.py              — filenames, history, and file loading
 │   ├── settings.py                  — local user preferences
 │   ├── playback.py                  — audio playback, position tracking, bookmarks
 │   ├── benchmark.py                 — local preset speed benchmark helper
+│   ├── timing_analysis.py           — sidecar timing summariser and async-finalize adviser
+│   ├── platform.py                  — OS-aware play/reveal/open-folder helpers
+│   ├── wifi_server.py               — local HTTP server for iPhone WiFi transfer
 │   ├── m4b_export.py                — chapter audit, FFmetadata builder, ffmpeg M4B export
 │   └── ui/
 │       ├── main_window.py           — QMainWindow shell, sidebar, stacked pages
@@ -413,6 +429,7 @@ Narracast/
 │           ├── history_page.py      — generated audio library
 │           ├── reading_page.py      — Read mode with highlighting and focus
 │           ├── projects_page.py     — Project / Book mode
+│           ├── transfer_page.py     — WiFi Transfer server control and file browser
 │           └── help_page.py         — Help Center
 ├── reference.wav                    — the active voice clip used for cloning
 ├── README.md                        — this file
@@ -439,6 +456,7 @@ Narracast/
 | pdfminer.six | Extracting text from PDF uploads |
 | mutagen | Writing ID3 tags to generated MP3 files |
 | ffmpeg | Voice reference clip extraction and M4B audiobook export |
+| ffplay | Real-time audio streaming during generation (bundled with ffmpeg) |
 
 ---
 
@@ -453,18 +471,21 @@ Narracast/
 
 ---
 
-## Transferring MP3s to your phone
+## Transferring MP3s to your iPhone
 
+The easiest way is the built-in **Transfer** page — it starts a local WiFi server so your iPhone can browse and download files directly in Safari or the Narracast iOS app. See [Transfer to iPhone](#transfer-to-iphone) above.
+
+Other options:
 - **AirDrop** — in History, use **Open output folder**, then right-click a file → Share → AirDrop
-- **USB** — connect your phone and drag files across in Finder
+- **USB** — connect your iPhone and drag files across in Finder
 
 ---
 
 ## Requirements
 
-- macOS (Apple Silicon recommended — uses MPS for fast inference)
+- macOS (Apple Silicon — uses MPS for fast inference)
 - Python 3.11
-- ffmpeg (`brew install ffmpeg`)
+- ffmpeg + ffplay (`brew install ffmpeg`)
 - All Python packages listed in `requirements.txt`
 
 Install Python packages with:
@@ -473,7 +494,7 @@ Install Python packages with:
 venv/bin/pip install -r requirements.txt
 ```
 
-Run the lightweight helper tests with:
+Run the backend test suite (365 tests, no GPU required):
 
 ```bash
 venv/bin/python3 -m unittest discover -s tests

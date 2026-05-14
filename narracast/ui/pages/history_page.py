@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import subprocess
 import json
 from pathlib import Path
 from typing import Optional
@@ -28,6 +27,7 @@ from narracast.output_files import (
     list_history_files,
 )
 from narracast.metadata import metadata_path_for_audio
+from narracast.platform import open_folder, play_audio, reveal_label, reveal_path
 from narracast.ui import icons
 from narracast.paths import OUTPUT_DIR
 from narracast.ui.widgets import Card, Divider, MutedLabel
@@ -117,7 +117,7 @@ class HistoryPage(QWidget):
         self.play_btn.clicked.connect(self._play_audio)
         action_row.addWidget(self.play_btn)
 
-        self.reveal_btn = QPushButton("Reveal")
+        self.reveal_btn = QPushButton(reveal_label())
         self.reveal_btn.setIcon(icons.icon(icons.REVEAL))
         self.reveal_btn.setFixedHeight(36)
         self.reveal_btn.setEnabled(False)
@@ -217,19 +217,29 @@ class HistoryPage(QWidget):
             self.open_in_reader.emit(str(self._selected_path))
 
     def _play_audio(self) -> None:
-        if self._selected_path:
-            subprocess.Popen(
-                ["afplay", str(self._selected_path)],
-                stdout=subprocess.DEVNULL,
-                stderr=subprocess.DEVNULL,
-            )
+        if not self._selected_path:
+            return
+        try:
+            play_audio(self._selected_path)
+        except Exception as exc:
+            from PySide6.QtWidgets import QMessageBox
+            QMessageBox.warning(self, "Cannot play audio", str(exc))
 
     def _reveal_selected(self) -> None:
-        if self._selected_path:
-            subprocess.Popen(["open", "-R", str(self._selected_path)])
+        if not self._selected_path:
+            return
+        try:
+            reveal_path(self._selected_path)
+        except Exception as exc:
+            from PySide6.QtWidgets import QMessageBox
+            QMessageBox.warning(self, "Cannot reveal file", str(exc))
 
     def _open_output_folder(self) -> None:
-        subprocess.Popen(["open", str(OUTPUT_DIR)])
+        try:
+            open_folder(OUTPUT_DIR)
+        except Exception as exc:
+            from PySide6.QtWidgets import QMessageBox
+            QMessageBox.warning(self, "Cannot open folder", str(exc))
 
     def _delete_selected(self) -> None:
         if not self._selected_path:

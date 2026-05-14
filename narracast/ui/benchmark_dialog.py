@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+import threading
+import uuid
+
 from PySide6.QtCore import QThread, Signal
 from PySide6.QtWidgets import (
     QDialog,
@@ -14,12 +17,13 @@ from PySide6.QtWidgets import (
     QVBoxLayout,
 )
 
-from narracast.benchmark import run_all_presets
+from narracast.presets import GENERATION_PRESETS
+from narracast.tts_process import JobCallbacks, get_tts_process
 from narracast.ui.widgets import MutedLabel
 
 
 class BenchmarkWorker(QThread):
-    """Runs preset benchmarks off the UI thread."""
+    """Runs preset benchmarks off the UI thread via the TTS worker process."""
 
     preset_started = Signal(str)
     preset_done = Signal(dict)
@@ -29,19 +33,53 @@ class BenchmarkWorker(QThread):
     def __init__(self, voice_name: str, voice_path: str) -> None:
         super().__init__()
         self.voice_name = voice_name
-        self.voice_path = voice_path
+        self.voice_path = voice_path  # kept for API compatibility; worker resolves internally
 
     def run(self) -> None:
-        try:
-            results = run_all_presets(
-                self.voice_name,
-                self.voice_path,
-                on_preset_start=self.preset_started.emit,
-                on_preset_done=self.preset_done.emit,
+        proc = get_tts_process()
+        results: list[dict] = []
+
+        for preset_name in GENERATION_PRESETS:
+            self.preset_started.emit(preset_name)
+
+            done_event = threading.Event()
+            result_holder: list[dict] = []
+            error_holder: list[str] = []
+
+            def _on_result(result: dict, _ev=done_event, _r=result_holder) -> None:
+                _r.append(result)
+                _ev.set()
+
+            def _on_error(err: str, _ev=done_event, _e=error_holder) -> None:
+                _e.append(err)
+                _ev.set()
+
+            callbacks = JobCallbacks(
+                on_benchmark_preset_done=_on_result,
+                on_error=_on_error,
             )
-            self.finished_ok.emit(results)
-        except Exception as exc:
-            self.failed.emit(str(exc))
+            proc.submit_benchmark_preset(
+                {
+                    "job_id": uuid.uuid4().hex[:8],
+                    "voice_name": self.voice_name,
+                    "preset_name": preset_name,
+                },
+                callbacks,
+            )
+
+            timed_out = not done_event.wait(timeout=600.0)  # 10-minute safety timeout
+            if timed_out:
+                self.failed.emit(f"Timeout waiting for benchmark preset '{preset_name}'.")
+                return
+            if error_holder:
+                self.failed.emit(error_holder[0])
+                return
+
+            result = result_holder[0]
+            results.append(result)
+            self.preset_done.emit(result)
+
+        self.finished_ok.emit(results)
 
 
 class BenchmarkDialog(QDialog):
@@ -101,6 +139,10 @@ class BenchmarkDialog(QDialog):
         layout.addLayout(row)
 
     def _start(self) -> None:
+        if not get_tts_process().is_alive():
+            self.status.setText("TTS worker not ready. Wait for model to finish loading.")
+            return
+
         self.table.setRowCount(0)
         self.progress.setValue(0)
         self.status.setText("Starting benchmark…")

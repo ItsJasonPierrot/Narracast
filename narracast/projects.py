@@ -476,6 +476,32 @@ def merge_session_with_next(
     return None
 
 
+def move_session(
+    project_id: str,
+    session_id: str,
+    direction: int,
+    *,
+    root: Path = PROJECTS_DIR,
+) -> bool:
+    """Move a session up or down in the project's session list."""
+    project = load_project(project_id, root)
+    if project is None or direction == 0:
+        return False
+    sessions = project.get("sessions", [])
+    for index, session in enumerate(sessions):
+        if session["id"] != session_id:
+            continue
+        target = index - 1 if direction < 0 else index + 1
+        if target < 0 or target >= len(sessions):
+            return False
+        sessions[index], sessions[target] = sessions[target], sessions[index]
+        session["updated_at"] = _now()
+        project["updated_at"] = _now()
+        save_project(project, root=root)
+        return True
+    return False
+
+
 def refresh_project_outputs(project_id: str, root: Path = PROJECTS_DIR) -> dict[str, Any] | None:
     """Refresh generated/missing status based on chapter output files."""
     project = load_project(project_id, root)

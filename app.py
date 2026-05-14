@@ -3,7 +3,6 @@
 import sys
 import os
 import queue
-import threading
 
 os.environ.setdefault("TOKENIZERS_PARALLELISM", "false")
 
@@ -11,10 +10,10 @@ from PySide6.QtCore import Qt, QTimer
 from PySide6.QtGui import QFontDatabase, QPixmap
 from PySide6.QtWidgets import QApplication, QDialog, QLabel, QProgressBar, QVBoxLayout
 
-from narracast.audio_generation import best_device, set_tts
 from narracast.paths import SPLASH_ICON_PATH
 from narracast.queue_manager import start_queue_worker
 from narracast.settings import load_settings
+from narracast.tts_process import get_tts_process
 from narracast.ui.signals import get_signals
 from narracast.ui.theme import apply_theme
 
@@ -117,18 +116,6 @@ def main():
 
     load_events: queue.Queue[tuple[str, str]] = queue.Queue()
 
-    def _load_model_worker() -> None:
-        try:
-            device = best_device()
-
-            from f5_tts.api import F5TTS
-
-            model = F5TTS(device=device)
-            set_tts(model, device=device)
-            load_events.put(("ready", device))
-        except Exception as exc:
-            load_events.put(("error", str(exc)))
-
     def _poll_model_load() -> None:
         state["ticks"] += 1
         if state["ticks"] == 1:
@@ -148,8 +135,12 @@ def main():
         else:
             _on_error(payload)
 
-    app._narracast_loader_thread = threading.Thread(target=_load_model_worker, daemon=True)
-    app._narracast_loader_thread.start()
+    # Spawn the TTS worker subprocess; it will emit ready/load_error via callbacks
+    get_tts_process().start(
+        on_ready=lambda device: load_events.put(("ready", device)),
+        on_load_error=lambda err: load_events.put(("error", err)),
+    )
+
     QTimer.singleShot(1800, _show_main_window)
     QTimer.singleShot(100, _poll_model_load)
 

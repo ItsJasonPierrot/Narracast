@@ -80,3 +80,7 @@ PROJECTS         = "mdi6.book-multiple"
 QUEUE_NAV        = "mdi6.playlist-music"
 HISTORY          = "mdi6.history"
 HELP_CIRCLE      = "mdi6.help-circle-outline"
+# WiFi Transfer
+WIFI             = "mdi6.wifi"
+CELLPHONE        = "mdi6.cellphone"
+QR_CODE          = "mdi6.qrcode"

@@ -58,9 +58,11 @@ Infrastructure.
 - Platform shell helper for play audio, reveal file, open folder, and log directory behavior across macOS / Windows / Linux
 - macOS app bundle with branded `.icns`, splash screen, background model loader, `~/Library/Logs/Narracast.log` for launch errors
 - Cross-platform release packaging helper, release build notes for macOS / Windows / Linux, generated SHA-256 archive checksums, and `requirements.lock`
-- 252 backend tests
+- 365 backend tests
 - Cross-platform shell helpers (`platform.py`): play audio, reveal file, open folder, OS-aware button labels, unified log directory
 - Import existing MP3 folder into project: sidecar-aware chapter creation, natural-sort order, draft stubs for sidecar-less files, session rebuild
+- Streaming chunk playback: `ChunkStreamer` pipes raw PCM to ffplay via streaming WAV-over-stdin header; `generate_core()` `on_chunk` callback; graceful degradation when ffplay absent
+- Local TTS backend process: F5-TTS in a persistent subprocess (`tts_worker.py`); JSON-lines IPC + base64 PCM chunks; `TTSProcess` GUI manager with per-job `JobCallbacks`; crash-isolated; cancellation between chunks; benchmark, queue, voice preview all routed through worker
 
 ---
 
@@ -128,17 +130,15 @@ Implemented in `narracast/mp3_folder_import.py`. See v1 shipped section.
 
 ---
 
-### 4 · Streaming Chunk Playback
+### 4 · Streaming Chunk Playback — **Shipped**
 
-**Why:** Long chapters take minutes to generate. Streaming lets the user start listening after the first chunk instead of waiting for the full MP3.
+Audio starts playing after the first synthesised chunk; ffplay receives raw PCM via a streaming WAV header on stdin while inference continues for the remaining chunks.  The final MP3 and sidecar are still written normally when all chunks complete.
 
-**Scope:**
-- Emit a `chunk_ready(path, index)` signal from `generate_core()` as each chunk WAV is finalized.
-- Reading page (or a lightweight inline player) queues and plays chunks in order while generation continues.
-- Final full MP3 and sidecar are still written when all chunks complete.
-- Cancellation must clean up partial chunk files.
-
-**Caution:** This touches the generation pipeline and the reader simultaneously. The previous dependency on async finalization (item 1) is removed — that item was investigated and closed.
+**Implementation:**
+- `narracast/chunk_stream.py` — `ChunkStreamer` class: launches `ffplay -i pipe:0 -nodisp -autoexit`, writes a 44-byte streaming WAV header with `0xFFFFFFFF` unknown-size fields, then accepts `AudioSegment` chunks via `feed()`.  Falls back gracefully when ffplay is not installed.
+- `generate_core()` gained an `on_chunk` parameter.  After each `infer_chunk_segment()` call, the segment is handed to `on_chunk`; errors are silently swallowed so a streaming failure can never abort normal generation.
+- `GeneratePage._start_generate()` creates a `ChunkStreamer`, calls `streamer.start()`, passes `streamer.feed` as `on_chunk`, calls `streamer.close()` on success and `streamer.stop()` on error.  A "Streaming audio as it generates…" label is shown in the job card while active.
+- 44 backend tests cover the WAV header byte layout, ffplay availability caching, start/feed/stop/close lifecycle, format conversion, broken-pipe handling, thread safety, and `on_chunk` behaviour in `generate_core`.
 
 | User Value | Difficulty | Risk |
 |---:|---:|---:|
@@ -146,16 +146,20 @@ Implemented in `narracast/mp3_folder_import.py`. See v1 shipped section.
 
 ---
 
-### 5 · Local TTS Backend Process
+### 5 · Local TTS Backend Process — **Shipped**
 
-**Why:** Moving F5-TTS into a persistent worker process isolates crashes, simplifies cancellation, and enables streaming in a cleaner way.
+F5-TTS now lives in a persistent subprocess.  The GUI process has no model object; crashes in inference leave the GUI window running, and the next generation re-uses the already-loaded worker.  Cancellation fires between chunks via a threading.Event in the worker.
 
-**Scope:**
-- Worker process owns the model, device, and voice cache.
-- GUI sends jobs via `multiprocessing.Queue` or local socket; worker emits progress events back.
-- GUI process stays responsive even if inference blocks.
-
-**Caution:** Do not start this before streaming chunk playback is done. Streaming will reveal what the IPC interface actually needs.
+**Implementation:**
+- `narracast/tts_worker.py` — Worker subprocess (`python -m narracast.tts_worker`): loads F5-TTS on startup, reads JSON-line commands from stdin, writes JSON-line responses to stdout, emits PCM chunks as base64 for streaming.  Supports: `generate`, `preview`, `benchmark_preset`, `cancel`, `shutdown`, `ping`.
+- `narracast/tts_process.py` — `TTSProcess` GUI-side manager: spawns the worker, reads responses in a daemon thread, routes each message to the active job's `JobCallbacks`.  `get_tts_process()` returns the application singleton.
+- `narracast/audio_generation.py` — `GenerationCancelled(BaseException)` added; `on_chunk` handling updated to re-raise it so cancellation propagates through `generate_core()`.
+- `app.py` — Model loading replaced: `get_tts_process().start(on_ready=..., on_load_error=...)` spawns the worker; `on_ready` fires when the worker emits `{"type": "ready"}`.  No in-process torch/F5-TTS import.
+- `narracast/queue_manager.py` — `_run_job()` submits via `get_tts_process().submit_job()` and blocks on a `threading.Event` until the job's `on_done` / `on_error` / `on_cancelled` callback fires.
+- `narracast/ui/pages/generate_page.py` — `_start_generate()` and `_start_preview()` replaced: no more daemon threads; both use `submit_job()` with per-job `JobCallbacks`.  Streaming via `ChunkStreamer` is preserved.
+- `narracast/ui/pages/voice_page.py` — `_preview_profile()` uses `submit_preview()` instead of calling `infer_chunk()` in a thread.
+- `narracast/ui/benchmark_dialog.py` — `BenchmarkWorker` submits `benchmark_preset` commands one preset at a time via `submit_benchmark_preset()`, using a `threading.Event` per preset.  Dialog shows "not ready" if worker hasn't loaded yet.
+- 37 backend tests: `JobCallbacks` dataclass, all `_dispatch()` message types, `_send()` safety, full end-to-end flow with fake subprocess, `is_alive()`, singleton, and `GenerationCancelled` propagation.
 
 | User Value | Difficulty | Risk |
 |---:|---:|---:|
@@ -163,25 +167,46 @@ Implemented in `narracast/mp3_folder_import.py`. See v1 shipped section.
 
 ---
 
-### 6 · Word-Level Highlighting — Deferred
+### 6 · WiFi Transfer Server — **Shipped**
 
-**Why deferred:** F5-TTS produces no word timestamps. Forced alignment (e.g., `whisperx`, `montreal-forced-aligner`) requires a full second-pass over the generated audio and adds a heavy dependency. Sentence-level highlighting already covers most of the user value at a fraction of the complexity.
+The Mac app runs a local HTTP server so an iPhone can pull generated MP3s and sidecar JSON over the local network — no cables, no cloud, no iTunes.
 
-**Revisit when:** A lightweight forced-alignment library with an acceptable license and install size becomes available, or when sentence highlighting is demonstrably insufficient for a user group.
+**Implementation:**
+- `narracast/wifi_server.py` — `WifiServer` class: `ThreadingHTTPServer` (stdlib) running in a daemon thread. Endpoints: `GET /api/info`, `/api/files` (JSON file list), `/api/audio/<filename>` (MP3 with `Accept-Ranges`/`Range` support for seeking), `/api/metadata/<filename>` (sidecar JSON, `output_path` stripped). Path traversal rejected at 400 before any filesystem access. Port 8765 with automatic fallback to 8766–8774.
+- `narracast/ui/pages/transfer_page.py` — new sidebar page: server status dot, copyable URL field, start/stop toggle, live file list (reuses `list_history_files()` and `format_history_row()`). Server auto-starts on `showEvent`; `stop_server()` wired to `MainWindow.closeEvent`.
+- `narracast/ui/icons.py` — `WIFI`, `CELLPHONE`, `QR_CODE` constants added.
+- `narracast/ui/sidebar.py` — "Transfer" nav entry added.
+- `narracast/ui/main_window.py` — `TransferPage` registered at index 6; `closeEvent` calls `stop_server()`.
+- `narracast/ui/signals.py` — `wifi_server_status` signal added.
+- 32 backend tests cover server lifecycle, all four endpoints, range requests, path traversal, and multi-file listing.
 
 | User Value | Difficulty | Risk |
 |---:|---:|---:|
-| 4 | 5 | 5 |
+| 5 | 3 | 2 |
 
 ---
 
-### 7 · Mobile Companion App — Deferred
+### 7 · iOS Companion App — Active
 
-This is a separate product. Revisit after the desktop app has a stable release history and a clear sync story.
+**Goal:** iPhone app that connects to the Mac's WiFi transfer server, plays generated MP3s, and follows along with synchronized sentence highlighting. Reading position and bookmarks sync back to the Mac sidecar.
 
-| User Value | Difficulty | Risk |
-|---:|---:|---:|
-| 5 | 5 | 5 |
+**Scope (MVP):**
+- Browse and download MP3 + sidecar from the Mac's `/api/files` and `/api/audio/<filename>` endpoints
+- Native audio playback with –10 s / +10 s / repeat
+- Full-text reading view with sentence-level highlight (sidecar `timeline` field drives it)
+- Save last position back to Mac (new `POST /api/position` endpoint, to be added)
+- No on-device generation
+
+**Out of scope for MVP:** word-level highlighting, iCloud sync, Android.
+
+---
+
+## Possible Future
+
+These items are not planned. They may be revisited if there is clear user demand.
+
+- **Word-level highlighting** — per-word karaoke sync; blocked on a lightweight forced-aligner with an acceptable license. Sentence-level highlighting covers the accessibility need well enough for now.
+- **Android companion** — separate platform, separate product. Revisit if iOS app proves the pattern.
 
 ---
 

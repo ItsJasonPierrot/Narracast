@@ -29,6 +29,7 @@ _NAV_ITEMS = [
     ("voice",     "Voice",          icons.SAVE_VOICE),
     ("history",   "History",        icons.HISTORY),
     ("read",      "Read",           icons.BOOK_OPEN),
+    ("transfer",  "Transfer",       icons.WIFI),
     ("help",      "Help",           icons.HELP_CIRCLE),
 ]
 

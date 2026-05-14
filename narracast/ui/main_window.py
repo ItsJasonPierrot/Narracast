@@ -22,6 +22,7 @@ from narracast.ui.pages.queue_page import QueuePage
 from narracast.ui.pages.voice_page import VoicePage
 from narracast.ui.pages.history_page import HistoryPage
 from narracast.ui.pages.reading_page import ReadingPage
+from narracast.ui.pages.transfer_page import TransferPage
 from narracast.ui.pages.help_page import HelpPage
 
 
@@ -32,7 +33,8 @@ PAGE_INDEX = {
     "voice": 3,
     "history": 4,
     "read": 5,
-    "help": 6,
+    "transfer": 6,
+    "help": 7,
 }
 
 
@@ -82,6 +84,7 @@ class MainWindow(QMainWindow):
         self.voice_page = VoicePage()
         self.history_page = HistoryPage()
         self.reading_page = ReadingPage()
+        self.transfer_page = TransferPage()
         self.help_page = HelpPage()
 
         for page in [
@@ -91,6 +94,7 @@ class MainWindow(QMainWindow):
             self.voice_page,
             self.history_page,
             self.reading_page,
+            self.transfer_page,
             self.help_page,
         ]:
             self.stack.addWidget(page)
@@ -189,4 +193,5 @@ class MainWindow(QMainWindow):
         }
         save_settings(settings)
         self.reading_page.shutdown()
+        self.transfer_page.stop_server()
         event.accept()

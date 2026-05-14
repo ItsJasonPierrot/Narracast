@@ -15,6 +15,7 @@ class AppSignals(QObject):
     voice_library_changed = Signal()
     voice_preview_done = Signal(str)
     voice_preview_error = Signal(str)
+    wifi_server_status = Signal(str)  # "running:http://...:PORT" | "stopped" | "error:..."
 
 
 _signals = AppSignals()

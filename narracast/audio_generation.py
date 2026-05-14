@@ -6,6 +6,16 @@ import threading
 import time
 from pathlib import Path
 
+
+class GenerationCancelled(BaseException):
+    """Raised by an ``on_chunk`` callback to cancel the current generation job.
+
+    Inherits from :class:`BaseException` rather than :class:`Exception` so it
+    propagates through ``except Exception`` clauses that swallow ordinary
+    streaming errors.  Only the worker's ``on_chunk`` raises this; the GUI-side
+    streaming callback never does.
+    """
+
 import soundfile as sf
 from pydub import AudioSegment
 
@@ -220,8 +230,19 @@ def generate_core(
     audio_polish: AudioPolishSettings | None = None,
     project_id: str = "",
     chapter_id: str = "",
+    on_chunk=None,
 ):
-    """Core generation — progress-callback agnostic."""
+    """Core generation — progress-callback agnostic.
+
+    Parameters
+    ----------
+    on_chunk:
+        Optional callable invoked with each synthesised :class:`AudioSegment`
+        as soon as it is ready, *before* the final MP3 is assembled.  Used by
+        the streaming-playback feature to pipe audio to ffplay while inference
+        continues.  Errors raised inside ``on_chunk`` are silently ignored so
+        that a streaming failure can never abort normal generation.
+    """
     total_start = time.perf_counter()
     timings: dict[str, float] = {}
     timings["_total_start"] = total_start
@@ -300,6 +321,13 @@ def generate_core(
             chunk_times.append(inference_elapsed)
             for key, value in chunk_timing.items():
                 timings[key] = timings.get(key, 0.0) + value
+            if on_chunk:
+                try:
+                    on_chunk(segment)
+                except GenerationCancelled:
+                    raise  # cancellation must propagate up through generate_core
+                except Exception:
+                    pass  # all other errors are best-effort (streaming)
             assembly_start = time.perf_counter()
             combined += segment
             timings["assembly_s"] += time.perf_counter() - assembly_start

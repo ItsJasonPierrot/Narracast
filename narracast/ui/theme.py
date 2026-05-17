@@ -27,6 +27,12 @@ QWidget#sidebar {
     background: #0a111b;
     border-right: 1px solid #1a2a3a;
 }
+QLabel#app_name {
+    background: transparent;
+    font-weight: 700;
+    font-size: 16px;
+    color: #e9f1ff;
+}
 
 QWidget#right_rail {
     background: #0a111b;
@@ -348,6 +354,11 @@ QLabel#h2 {
     font-weight: 700;
     color: #e9f1ff;
 }
+QLabel#h3 {
+    font-size: 15px;
+    font-weight: 600;
+    color: #e9f1ff;
+}
 
 /* ── Status bar ─────────────────────────────────────────── */
 QStatusBar {
@@ -414,6 +425,12 @@ QWidget {
 QWidget#sidebar {
     background: #e0eaf5;
     border-right: 1px solid #c0ccd8;
+}
+QLabel#app_name {
+    background: transparent;
+    font-weight: 700;
+    font-size: 16px;
+    color: #1a2a3a;
 }
 
 QWidget#right_rail {
@@ -729,6 +746,11 @@ QLabel#section {
 QLabel#h2 {
     font-size: 20px;
     font-weight: 700;
+    color: #1a2a3a;
+}
+QLabel#h3 {
+    font-size: 15px;
+    font-weight: 600;
     color: #1a2a3a;
 }
 

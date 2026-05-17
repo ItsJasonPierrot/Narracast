@@ -74,7 +74,7 @@ class Sidebar(QWidget):
         header.addWidget(icon_label)
 
         app_name = QLabel("Narracast")
-        app_name.setStyleSheet("background: transparent; font-weight: 700; font-size: 16px;")
+        app_name.setObjectName("app_name")
         header.addWidget(app_name)
         header.addStretch()
         root_layout.addLayout(header)

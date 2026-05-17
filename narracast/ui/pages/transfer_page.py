@@ -34,6 +34,16 @@ from narracast.ui.signals import get_signals
 from narracast.ui.widgets import Card, Divider, MutedLabel
 from narracast.wifi_server import WifiServer
 
+# Semantic status-dot colors — intentionally not in QSS because they convey
+# live server state (stopped / starting / running / error) independently of
+# the app's dark/light theme.
+_DOT_COLOR = {
+    "stopped": "#6b7f96",   # muted grey
+    "starting": "#f0b429",  # amber
+    "running": "#a3ff73",   # green
+    "error": "#e05c5c",     # red
+}
+
 
 class TransferPage(QWidget):
     """WiFi Transfer page: start/stop the local HTTP server and browse files."""
@@ -79,7 +89,9 @@ class TransferPage(QWidget):
         status_row.setSpacing(8)
         self._status_dot = QLabel("●")
         self._status_dot.setFixedWidth(14)
-        self._status_dot.setStyleSheet("color: #6b7f96;")
+        self._status_dot.setAccessibleName("Server status indicator")
+        self._status_dot.setToolTip("Server status")
+        self._status_dot.setStyleSheet(f"color: {_DOT_COLOR['stopped']};")
         status_row.addWidget(self._status_dot)
         self._status_label = QLabel("Server stopped")
         status_row.addWidget(self._status_label, stretch=1)
@@ -171,7 +183,7 @@ class TransferPage(QWidget):
 
     def _start_server(self) -> None:
         self._toggle_btn.setEnabled(False)
-        self._status_dot.setStyleSheet("color: #f0b429;")
+        self._status_dot.setStyleSheet(f"color: {_DOT_COLOR['starting']};")
         self._status_label.setText("Starting…")
         try:
             self._server.start()
@@ -184,7 +196,7 @@ class TransferPage(QWidget):
         self._copy_btn.setEnabled(False)
         self._toggle_btn.setText("Start server")
         self._toggle_btn.setEnabled(True)
-        self._status_dot.setStyleSheet("color: #6b7f96;")
+        self._status_dot.setStyleSheet(f"color: {_DOT_COLOR['stopped']};")
         self._status_label.setText("Server stopped")
         get_signals().wifi_server_status.emit("stopped")
 
@@ -208,7 +220,7 @@ class TransferPage(QWidget):
         self._copy_btn.setEnabled(True)
         self._toggle_btn.setText("Stop server")
         self._toggle_btn.setEnabled(True)
-        self._status_dot.setStyleSheet("color: #a3ff73;")
+        self._status_dot.setStyleSheet(f"color: {_DOT_COLOR['running']};")
         self._status_label.setText(f"Running on {url}")
         get_signals().wifi_server_status.emit(f"running:{url}")
         self._refresh_files()
@@ -218,7 +230,7 @@ class TransferPage(QWidget):
         self._copy_btn.setEnabled(False)
         self._toggle_btn.setText("Start server")
         self._toggle_btn.setEnabled(True)
-        self._status_dot.setStyleSheet("color: #e05c5c;")
+        self._status_dot.setStyleSheet(f"color: {_DOT_COLOR['error']};")
         self._status_label.setText(f"Error: {message}")
         get_signals().wifi_server_status.emit(f"error:{message}")
 

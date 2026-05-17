@@ -8,6 +8,13 @@ Ratings use a 1–5 scale: **User Value** (how much this improves real use), **D
 
 ---
 
+## v1.5.0 — Shipped (2026-05-17)
+
+Streaming chunk playback, isolated TTS subprocess, WiFi Transfer Server, MP3 folder import, session reorder, session-level Read Session, and a full UX/accessibility pass.
+See [CHANGELOG.md](CHANGELOG.md) for the full v1.5.0 change list.
+
+---
+
 ## v1.0.0 — Shipped (2026-05-13)
 
 Everything below describes the current completed baseline. The original `v1.0.0`
@@ -66,11 +73,13 @@ Infrastructure.
 
 ---
 
-## Current Baseline (post-v1)
+## Current Baseline (v1.5.0)
 
-All v1 features are working. The next developer can start from `app.py`, `narracast/ui/main_window.py`, and `narracast/ui/pages/`. The backend is split cleanly under `narracast/`. All icons come from `narracast/ui/icons.py` — never hardcode mdi6 strings in pages. Tests run with `venv/bin/python -m unittest discover -s tests`; `pytest` is optional if installed.
+All v1.5.0 features are working. The next developer can start from `app.py`, `narracast/ui/main_window.py`, and `narracast/ui/pages/`. The backend is split cleanly under `narracast/`. All icons come from `narracast/ui/icons.py` — never hardcode mdi6 strings in pages. Tests run with `venv/bin/python -m pytest tests/`; 365 tests, no GPU required.
 
 Platform note: play/reveal/open-folder calls are centralized in `narracast/platform.py` with OS-aware error handling and button labels. Windows/Linux still need real-machine smoke tests before calling cross-platform runtime support complete.
+
+See [docs/projectdirections.md](docs/projectdirections.md) for a file-by-file walkthrough aimed at developers new to the codebase.
 
 ---
 
